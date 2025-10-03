@@ -1,3 +1,4 @@
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   // NOTE: Update this to include the paths to all files that contain Nativewind classes.
@@ -6,8 +7,8 @@ module.exports = {
   theme: {
     extend: {
       colors:{
-        primary:"#339989",
-        secondary: "#7DE2D1",
+        primary:"#4F677D",
+        secondary: "#92BCEA",
         accent: "#F4F8FB",
         dark: {
           100: "2b2c28",
