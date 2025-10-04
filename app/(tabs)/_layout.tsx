@@ -1,10 +1,8 @@
-import { StyleSheet, Text, View } from "react-native";
-import React from "react";
-import { Tabs } from "expo-router";
-import { Home, Library, Search, User, ZoomIn } from "lucide-react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Background } from "@react-navigation/elements";
 import { colors } from "@/components/colors";
+import { Tabs } from "expo-router";
+import { Home, Library, Search, User } from "lucide-react-native";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 const TabIcon = ({
   focused,
   title,
@@ -16,20 +14,18 @@ const TabIcon = ({
 }) => {
   if (focused) {
     return (
-      <SafeAreaProvider>
-        <View className="flex flex-row  w-[120px] min-h-12 justify-center items-center gap-2 rounded-full bg-primary px-4 py-2">
-          <Icon className="text-white" />
-          <Text className="text-white font-medium">{title}</Text>
-        </View>
-      </SafeAreaProvider>
+      // SafeAreaProvider'ı buradan kaldırdık
+      <View className="flex flex-row w-28 h-[60px] justify-center items-center gap-2 rounded-full bg-primary">
+        {/* min-h-[60px] yerine h-full kullandık. Bu sayede ebeveyninin yüksekliğine uyum sağlar. */}
+        <Icon className="text-white" />
+        <Text className="text-white font-medium">{title}</Text>
+      </View>
     );
   } else {
     return (
-      <SafeAreaProvider>
-        <View className=" px-4 py-2">
-          <Icon className="text-white" />
-        </View>
-      </SafeAreaProvider>
+      <View className="size-full justify-center items-center rounded-full">
+        <Icon className="text-white" />
+      </View>
     );
   }
 };
@@ -44,13 +40,15 @@ const _layout = () => {
           height: "100%",
           justifyContent: "center",
           alignItems: "center",
+          margin: 10,
         },
         tabBarStyle: {
           backgroundColor: colors.secondary,
           borderRadius: 50,
           marginHorizontal: 15,
           marginBottom: 20,
-          height: 60,
+          height: 60, // <-- Yüksekliği 70'den 60'a düşürdük
+          position: "absolute",
         },
       }}
     >
