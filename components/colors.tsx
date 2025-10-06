@@ -1,4 +1,3 @@
-// colors.js
 export const colors = {
   primary: "#153f6c",
   secondary: "#4F677D",

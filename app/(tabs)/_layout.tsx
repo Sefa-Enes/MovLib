@@ -44,6 +44,7 @@ const _layout = () => {
         },
         tabBarStyle: {
           backgroundColor: colors.secondary,
+          borderColor: colors.secondary,
           borderRadius: 50,
           marginHorizontal: 15,
           marginBottom: 20,
