@@ -58,15 +58,7 @@ export default function Index() {
               <Text className="text-lg text-accent font-bold mt-5 mb-3">
                 Latest Movies
               </Text>
-              {/* <FlatList
-                data={movies}
-                renderItem={({ item }) => <ContentCard {...item} />}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 16 }}
-                keyExtractor={(item) => item.id.toString()}
-                className="mt-2 pb-32"
-              /> */}
+
               <FlatList
                 data={movies}
                 renderItem={({ item }) => <ContentCard {...item} />}
@@ -112,22 +104,14 @@ export default function Index() {
               <Text className="text-lg text-accent font-bold mt-5 mb-3">
                 Latest series
               </Text>
-              {/* <FlatList
-                data={movies}
-                renderItem={({ item }) => <ContentCard {...item} />}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 16 }}
-                keyExtractor={(item) => item.id.toString()}
-                className="mt-2 pb-32"
-              /> */}
+
               <FlatList
                 data={series}
                 renderItem={({ item }) => <ContentCard {...item} />}
                 keyExtractor={(item) => item.id.toString()}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingLeft: 5, marginBottom: "5%" }}
+                contentContainerStyle={{ paddingLeft: 5, marginBottom: 50 }}
               />
               {/* <FlatList
                 data={series}
