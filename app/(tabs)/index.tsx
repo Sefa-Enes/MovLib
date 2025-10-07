@@ -1,8 +1,8 @@
 import { colors } from "@/components/colors";
-import MovieCard from "@/components/MovieCard";
+import ContentCard from "@/components/ContentCard";
 import SearchBox from "@/components/SearchBox";
 import useFetch from "@/hooks/useFetch";
-import { fetchMovies } from "@/services/api";
+import { fetchMovies, fetchSeries } from "@/services/api";
 import { useRouter } from "expo-router";
 import { FlatList, Text } from "react-native";
 
@@ -14,16 +14,21 @@ export default function Index() {
     loading: moviesLoading,
     error: moviesError,
   } = useFetch(() => fetchMovies({ query: "" }));
+  const {
+    data: series,
+    loading: seriesLoading,
+    error: seriesError,
+  } = useFetch(() => fetchSeries({ query: "" }));
 
   return (
     <View className="flex justify-center items-center bg-dark-200 w-screen h-screen">
       <Image
         source={require("@/assets/images/bg-image.png")}
-        className="absolute w-full z-0 opacity-25"
+        className="absolute w-full z-0 opacity-15"
         resizeMode="cover"
       />
       <ScrollView
-        className="flex-1 px-5"
+        className="flex-1 px-5 w-full"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ minHeight: "100%", paddingBottom: 10 }}
       >
@@ -51,25 +56,95 @@ export default function Index() {
             />
             <>
               <Text className="text-lg text-accent font-bold mt-5 mb-3">
-                Latest Moves
+                Latest Movies
               </Text>
+              {/* <FlatList
+                data={movies}
+                renderItem={({ item }) => <ContentCard {...item} />}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+                keyExtractor={(item) => item.id.toString()}
+                className="mt-2 pb-32"
+              /> */}
               <FlatList
+                data={movies}
+                renderItem={({ item }) => <ContentCard {...item} />}
+                keyExtractor={(item) => item.id.toString()}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingLeft: 5 }}
+              />
+              {/* <FlatList
                 data={movies}
                 renderItem={({ item }) => (
                   // <Text className="text-white text-sm">{item.title}</Text>
-                  <MovieCard {...item} />
+                  <ContentCard {...item} isGrid={true} />
                 )}
                 keyExtractor={(item) => item.id.toString()}
                 numColumns={3}
                 columnWrapperStyle={{
-                  justifyContent: "flex-start", //, "space-between"
-                  gap: 22,
-                  paddingRight: 5,
-                  marginBottom: 20,
+                  justifyContent: "space-evenly", //, "space-between"
+                  gap: 5,
+                  marginBottom: 5,
                 }}
                 className="mt-2 pb-32"
                 scrollEnabled={false}
+              /> */}
+            </>
+          </View>
+        )}
+        {seriesLoading ? (
+          <ActivityIndicator
+            size="large"
+            color="white"
+            className="mt-10 self-center"
+          />
+        ) : seriesError ? (
+          <Text>Error: {seriesError?.message}</Text>
+        ) : (
+          <View className="flex-1 mt-5">
+            {/* <SearchBox
+              onPress={() => router.push("/search")}
+              placeholder="Search a movie or series"
+            /> */}
+            <>
+              <Text className="text-lg text-accent font-bold mt-5 mb-3">
+                Latest series
+              </Text>
+              {/* <FlatList
+                data={movies}
+                renderItem={({ item }) => <ContentCard {...item} />}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+                keyExtractor={(item) => item.id.toString()}
+                className="mt-2 pb-32"
+              /> */}
+              <FlatList
+                data={series}
+                renderItem={({ item }) => <ContentCard {...item} />}
+                keyExtractor={(item) => item.id.toString()}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingLeft: 5, marginBottom: "5%" }}
               />
+              {/* <FlatList
+                data={series}
+                renderItem={({ item }) => (
+                  // <Text className="text-white text-sm">{item.title}</Text>
+                  <ContentCard {...item} isGrid={true} />
+                )}
+                keyExtractor={(item) => item.id.toString()}
+                numColumns={3}
+                columnWrapperStyle={{
+                  justifyContent: "space-evenly", //, "space-between"
+                  gap: 5,
+                  marginBottom: 5,
+                }}
+                className="mt-2 pb-32"
+                scrollEnabled={false}
+              /> */}
             </>
           </View>
         )}
