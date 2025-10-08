@@ -1,20 +1,13 @@
 import { colors } from "@/components/colors";
-import ContentCard from "@/components/ContentCard";
+import GridList from "@/components/GridList";
 import SearchBox from "@/components/SearchBox";
 import SegmentedControl from "@/components/ui/SegmentedButton";
+import { useChoseFetch } from "@/hooks/useChoseFetch";
 import useFetch from "@/hooks/useFetch";
 import { fetchMovies, fetchSeries } from "@/services/api";
 import { useRouter } from "expo-router";
-import React from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import React, { useState } from "react";
+import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 
 const search = () => {
   const router = useRouter();
@@ -28,6 +21,10 @@ const search = () => {
     loading: seriesLoading,
     error: seriesError,
   } = useFetch(() => fetchSeries({ query: "" }));
+
+  const [contentType, setContentType] = useState<"movie" | "tv">("movie");
+
+  const { data, loading, error } = useChoseFetch(contentType);
 
   return (
     <View className="flex justify-center items-center bg-dark-200 w-screen h-screen">
@@ -49,15 +46,7 @@ const search = () => {
           style={{ width: 200, height: 100 }}
         />
 
-        {moviesLoading ? (
-          <ActivityIndicator
-            size="large"
-            color="white"
-            className="mt-10 self-center"
-          />
-        ) : moviesError ? (
-          <Text>Error: {moviesError?.message}</Text>
-        ) : (
+        {
           <View className="flex-1 mt-5">
             <SearchBox
               onPress={() => router.push("/search")}
@@ -88,18 +77,15 @@ const search = () => {
             {/* uncontrolled example */}
             <SegmentedControl
               segments={[
-                { key: "a", label: "Movie" },
-                { key: "b", label: "Tv" },
+                { key: "movie", label: "Movie" },
+                { key: "tv", label: "Tv" },
               ]}
+              value={contentType}
               width={300}
               initialIndex={1}
-              onChange={(k) => console.log("uncontrolled selection:", k)}
-            />{" "}
+              onChange={(key) => setContentType(key as "movie" | "tv")}
+            />
             <>
-              <Text className="text-lg text-accent font-bold mt-5 mb-3">
-                Latest Movies
-              </Text>
-
               {/* <FlatList
                 data={movies}
                 renderItem={({ item }) => <ContentCard {...item} />}
@@ -108,7 +94,7 @@ const search = () => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ paddingLeft: 5 }}
               /> */}
-              <FlatList
+              {/* <FlatList
                 data={movies}
                 renderItem={({ item }) => (
                   // <Text className="text-white text-sm">{item.title}</Text>
@@ -123,56 +109,48 @@ const search = () => {
                 }}
                 className="mt-2 pb-32"
                 scrollEnabled={false}
-              />
+              /> */}
             </>
           </View>
-        )}
-        {seriesLoading ? (
-          <ActivityIndicator
-            size="large"
-            color="white"
-            className="mt-10 self-center"
-          />
-        ) : seriesError ? (
-          <Text>Error: {seriesError?.message}</Text>
-        ) : (
-          <View className="flex-1 mt-5">
-            {/* <SearchBox
-              onPress={() => router.push("/search")}
-              placeholder="Search a movie or series"
+        }
+
+        <View className="flex-1 mt-5">
+          <>
+            {/* <Text className="text-lg text-accent font-bold mt-5 mb-3">
+              Latest series
+            </Text> */}
+
+            {/* <FlatList
+                data={series}
+                renderItem={({ item }) => <ContentCard {...item} />}
+                keyExtractor={(item) => item.id.toString()}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingLeft: 5 }}
+              /> */}
+            {/* <FlatList
+              data={series}
+              renderItem={({ item }) => (
+                // <Text className="text-white text-sm">{item.title}</Text>
+                <ContentCard {...item} isGrid={true} />
+              )}
+              keyExtractor={(item) => item.id.toString()}
+              numColumns={3}
+              columnWrapperStyle={{
+                justifyContent: "space-evenly", //, "space-between"
+                gap: 5,
+                marginBottom: 5,
+              }}
+              className="mt-2 pb-32"
+              scrollEnabled={false}
             /> */}
-            <>
-              <Text className="text-lg text-accent font-bold mt-5 mb-3">
-                Latest series
-              </Text>
+          </>
+        </View>
 
-              {/* <FlatList
-                data={series}
-                renderItem={({ item }) => <ContentCard {...item} />}
-                keyExtractor={(item) => item.id.toString()}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingLeft: 5 }}
-              /> */}
-              <FlatList
-                data={series}
-                renderItem={({ item }) => (
-                  // <Text className="text-white text-sm">{item.title}</Text>
-                  <ContentCard {...item} isGrid={true} />
-                )}
-                keyExtractor={(item) => item.id.toString()}
-                numColumns={3}
-                columnWrapperStyle={{
-                  justifyContent: "space-evenly", //, "space-between"
-                  gap: 5,
-                  marginBottom: 5,
-                }}
-                className="mt-2 pb-32"
-                scrollEnabled={false}
-              />
-            </>
-          </View>
-        )}
+        <View className="flex-1 mt-5">
+          <Text>HookTest</Text>
+          <GridList data={data} loading={loading} error={error} />
+        </View>
       </ScrollView>
     </View>
   );

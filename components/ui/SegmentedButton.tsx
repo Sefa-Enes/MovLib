@@ -3,12 +3,12 @@ import {
   AccessibilityState,
   Animated,
   Pressable,
-  StyleSheet,
   Text,
   TextStyle,
   View,
   ViewStyle,
 } from "react-native";
+import { colors } from "../colors";
 
 type Segment = {
   key: string;
@@ -46,9 +46,9 @@ const SegmentedControl: React.FC<Props> = ({
   segmentStyle,
   activeTextStyle,
   inactiveTextStyle,
-  activeColor = "#2563eb",
-  inactiveColor = "#6b7280",
-  backgroundColor = "#e5e7eb",
+  activeColor = colors.primary,
+  inactiveColor = colors.accent,
+  backgroundColor = colors.secondary,
   rounded = true,
   disabledOpacity = 0.5,
 }) => {
@@ -76,7 +76,7 @@ const SegmentedControl: React.FC<Props> = ({
       useNativeDriver: false,
       stiffness: 240,
       damping: 18,
-      mass: 0.9,
+      mass: 0.3,
     }).start();
   }, [selectedKey, containerWidth, segments.length]);
 
@@ -100,39 +100,24 @@ const SegmentedControl: React.FC<Props> = ({
   return (
     <View
       onLayout={handleLayout}
-      style={[
-        styles.container,
-        {
-          backgroundColor,
-          width: width ?? "100%",
-          height,
-          borderRadius: rounded ? height / 2 : 8,
-        },
-        containerStyle,
-      ]}
+      className={`flex-row self-center mt-5 items-center justify-between relative overflow-hidden ${
+        rounded ? "rounded-full" : ""
+      }`}
+      style={[{ backgroundColor, height, width }, containerStyle]}
       accessible
       accessibilityRole="tablist"
     >
       {/* Slider */}
-      {containerWidth > 0 && (
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.slider,
-            {
-              width: segWidth,
-              height,
-              borderRadius: rounded ? height / 2 : 8,
-              transform: [
-                {
-                  translateX: Animated.add(anim, new Animated.Value(0)),
-                },
-              ],
-              backgroundColor: activeColor,
-            },
-          ]}
-        />
-      )}
+      <Animated.View
+        pointerEvents="none"
+        className={`absolute top-0 left-0 ${rounded ? "rounded-full" : ""}`}
+        style={{
+          width: segWidth,
+          height,
+          backgroundColor: activeColor,
+          transform: [{ translateX: anim }],
+        }}
+      />
 
       {/* Segments */}
       {segments.map((seg) => {
@@ -146,8 +131,8 @@ const SegmentedControl: React.FC<Props> = ({
           <Pressable
             key={seg.key}
             onPress={() => handlePress(seg)}
+            className="flex-1 justify-center items-center z-10"
             style={({ pressed }) => [
-              styles.segment,
               segmentStyle,
               {
                 opacity: seg.disabled ? disabledOpacity : pressed ? 0.85 : 1,
@@ -157,15 +142,16 @@ const SegmentedControl: React.FC<Props> = ({
             accessibilityState={a11yState}
             accessibilityLabel={seg.label ?? seg.key}
           >
-            <View style={styles.centerContent}>
+            <View className="items-center justify-center">
               {seg.node ? (
                 seg.node
               ) : (
                 <Text
+                  className={`text-center font-semibold ${
+                    isSelected ? "font-bold" : ""
+                  }`}
                   style={[
-                    isSelected
-                      ? [styles.activeText, activeTextStyle]
-                      : [styles.inactiveText, inactiveTextStyle],
+                    isSelected ? activeTextStyle : inactiveTextStyle,
                     { color: isSelected ? "#fff" : inactiveColor },
                   ]}
                 >
@@ -179,38 +165,5 @@ const SegmentedControl: React.FC<Props> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    position: "relative",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    overflow: "hidden",
-  },
-  slider: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-  },
-  segment: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 2,
-  },
-  centerContent: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  activeText: {
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  inactiveText: {
-    fontWeight: "600",
-    textAlign: "center",
-  },
-});
 
 export default SegmentedControl;

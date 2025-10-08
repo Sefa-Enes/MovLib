@@ -18,12 +18,12 @@ const ContentCard = ({
   vote_average,
   release_date,
   first_air_date,
-  routes = "/(tabs)",
+  routes,
   showLabel = false,
   isGrid = false,
 }: CardProps) => {
   return (
-    <Link href={routes} asChild>
+    <Link href={routes || "/(tabs)"} asChild>
       <TouchableOpacity className={`${!isGrid ? "w-36 m-2" : "w-[32%]"}`}>
         <Image
           source={{
