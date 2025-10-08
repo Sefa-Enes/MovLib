@@ -95,7 +95,7 @@ export default function Index() {
         ) : seriesError ? (
           <Text>Error: {seriesError?.message}</Text>
         ) : (
-          <View className="flex-1 mt-5">
+          <View className="flex-1 mt-5 mb-20">
             {/* <SearchBox
               onPress={() => router.push("/search")}
               placeholder="Search a movie or series"
