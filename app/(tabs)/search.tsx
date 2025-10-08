@@ -1,6 +1,7 @@
 import { colors } from "@/components/colors";
 import ContentCard from "@/components/ContentCard";
 import SearchBox from "@/components/SearchBox";
+import SegmentedControl from "@/components/ui/SegmentedButton";
 import useFetch from "@/hooks/useFetch";
 import { fetchMovies, fetchSeries } from "@/services/api";
 import { useRouter } from "expo-router";
@@ -12,7 +13,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -63,7 +63,7 @@ const search = () => {
               onPress={() => router.push("/search")}
               placeholder="Search a movie or series"
             />
-            <View className="flex-row justify-evenly items-center self-center rounded-full w-[60%] h-10 mt-5 bg-secondary">
+            {/* <View className="flex-row justify-evenly items-center self-center rounded-full w-[60%] h-10 mt-5 bg-secondary">
               <TouchableOpacity>
                 <View className="w-full text-center">
                   <Text>Movies</Text>
@@ -74,7 +74,27 @@ const search = () => {
                   <Text>Tv Series</Text>
                 </View>
               </TouchableOpacity>
-            </View>
+            </View> */}
+            {/* <SegmentedControl
+        segments={segments}
+        value={mode} // kontrol edilen kullanım
+        onChange={(k) => setMode(k)}
+        containerStyle={{ marginBottom: 16 }}
+        activeColor="#2563eb" // blue-600
+        inactiveColor="#4b5563" // gray-700
+        activeTextStyle={{ fontWeight: "700", color: "#fff" }}
+        inactiveTextStyle={{ fontWeight: "600" }}
+      /> */}
+            {/* uncontrolled example */}
+            <SegmentedControl
+              segments={[
+                { key: "a", label: "Movie" },
+                { key: "b", label: "Tv" },
+              ]}
+              width={300}
+              initialIndex={1}
+              onChange={(k) => console.log("uncontrolled selection:", k)}
+            />{" "}
             <>
               <Text className="text-lg text-accent font-bold mt-5 mb-3">
                 Latest Movies

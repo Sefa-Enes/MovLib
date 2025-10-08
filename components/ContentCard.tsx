@@ -7,6 +7,7 @@ type CardProps = Tv &
   Movie & {
     showLabel?: boolean;
     isGrid?: boolean;
+    routes?: string;
   };
 
 const ContentCard = ({
@@ -17,11 +18,12 @@ const ContentCard = ({
   vote_average,
   release_date,
   first_air_date,
+  routes = "/(tabs)",
   showLabel = false,
   isGrid = false,
 }: CardProps) => {
   return (
-    <Link href={`movies/${id}`} asChild>
+    <Link href={routes} asChild>
       <TouchableOpacity className={`${!isGrid ? "w-36 m-2" : "w-[32%]"}`}>
         <Image
           source={{

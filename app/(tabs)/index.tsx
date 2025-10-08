@@ -61,7 +61,9 @@ export default function Index() {
 
               <FlatList
                 data={movies}
-                renderItem={({ item }) => <ContentCard {...item} />}
+                renderItem={({ item }) => (
+                  <ContentCard {...item} routes={`movies/${item.id}`} />
+                )}
                 keyExtractor={(item) => item.id.toString()}
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -107,7 +109,9 @@ export default function Index() {
 
               <FlatList
                 data={series}
-                renderItem={({ item }) => <ContentCard {...item} />}
+                renderItem={({ item }) => (
+                  <ContentCard {...item} routes={`series/${item.id}`} />
+                )}
                 keyExtractor={(item) => item.id.toString()}
                 horizontal
                 showsHorizontalScrollIndicator={false}
