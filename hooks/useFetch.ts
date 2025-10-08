@@ -24,11 +24,11 @@ const useFetch = <T>(fetchFunction: () => Promise<T>, autoFetch = true) => {
     setError(null);
   };
 
+  // useFetch.ts
   useEffect(() => {
-    if (autoFetch) {
-      fetchData();
-    }
-  }, []);
+    if (autoFetch) fetchData();
+  }, []); // sadece mount'ta çalışır
+
   return { data, loading, error, refetch: fetchData, reset };
 };
 export default useFetch;

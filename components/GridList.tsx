@@ -3,10 +3,12 @@ import { ActivityIndicator, FlatList, Text, View } from "react-native";
 import ContentCard from "./ContentCard";
 
 const GridList = ({
+  contentType,
   data,
   loading,
   error,
 }: {
+  contentType: string;
   data: any;
   loading: boolean;
   error: Error | null;
@@ -23,28 +25,38 @@ const GridList = ({
   if (error) {
     return <Text>Error: {error?.message}</Text>;
   }
-
+  const pathHead = contentType === "tv" ? "tv" : "movies";
   return (
     <View className="flex-1 mt-5">
-      <View>
-        <Text className="text-lg text-accent font-bold mt-5 mb-3">
-          Latest series
-        </Text>
-
-        <FlatList
-          data={data}
-          renderItem={({ item }) => <ContentCard {...item} isGrid={true} />}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={3}
-          columnWrapperStyle={{
-            justifyContent: "space-evenly", //, "space-between"
-            gap: 5,
-            marginBottom: 5,
-          }}
-          className="mt-2 pb-32"
-          scrollEnabled={false}
-        />
-      </View>
+      <FlatList
+        data={data}
+        renderItem={({ item }) => (
+          <ContentCard
+            {...item}
+            routes={`${pathHead}/${item.id}`}
+            isGrid={true}
+          />
+        )}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={3}
+        columnWrapperStyle={{
+          justifyContent: "space-evenly", //, "space-between"
+          gap: 5,
+          marginBottom: 5,
+        }}
+        className="mt-2 pb-32"
+        scrollEnabled={false}
+        ListEmptyComponent={
+          !loading &&
+          !error && (
+            <View className="mt-15 px-5">
+              <Text className="text-center text-gray-50">
+                {"Nothing Found :("}
+              </Text>
+            </View>
+          )
+        }
+      />
     </View>
   );
 };
