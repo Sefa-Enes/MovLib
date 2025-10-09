@@ -34,6 +34,41 @@ type Props = {
   rounded?: boolean;
   disabledOpacity?: number;
 };
+/**
+ * A customizable segmented control component for React Native + Web.
+ *
+ * - Supports animation between segments.
+ * - Fully controlled or uncontrolled modes.
+ * - Responsive to container width changes.
+ *
+ * @param {Object} props - Component props.
+ * @param {Segment[]} props.segments - Segment definitions.
+ * @param {string} [props.value] - Controlled selected segment key.
+ * @param {(key: string) => void} [props.onChange] - Callback on change.
+ *
+ * @example
+     <SegmentedControl
+  segments={segments}
+  value={mode} // kontrol edilen kullanım
+  onChange={(k) => setMode(k)}
+  containerStyle={{ marginBottom: 16 }}
+  activeColor="#2563eb" // blue-600
+  inactiveColor="#4b5563" // gray-700
+  activeTextStyle={{ fontWeight: "700", color: "#fff" }}
+  inactiveTextStyle={{ fontWeight: "600" }}
+/>;
+ * @example
+<SegmentedControl
+  segments={[
+    { key: "movie", label: "Movie" },
+    { key: "tv", label: "Tv" },
+  ]}
+  value={contentType}
+  width={300}
+  initialIndex={1}
+  onChange={(key) => setContentType(key as "movie" | "tv")}
+/>; 
+ */
 
 const SegmentedControl: React.FC<Props> = ({
   segments,
@@ -108,16 +143,22 @@ const SegmentedControl: React.FC<Props> = ({
       accessibilityRole="tablist"
     >
       {/* Slider */}
-      <Animated.View
-        pointerEvents="none"
-        className={`absolute top-0 left-0 ${rounded ? "rounded-full" : ""}`}
-        style={{
-          width: segWidth,
-          height,
-          backgroundColor: activeColor,
-          transform: [{ translateX: anim }],
-        }}
-      />
+      {segWidth > 0 && (
+        <Animated.View
+          pointerEvents="none"
+          //   className={`absolute top-0 left-0 ${rounded ? "rounded-full" : ""}`}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            borderRadius: rounded ? 9999 : 0,
+            width: segWidth,
+            height,
+            backgroundColor: activeColor,
+            transform: [{ translateX: anim }],
+          }}
+        />
+      )}
 
       {/* Segments */}
       {segments.map((seg) => {
@@ -167,3 +208,26 @@ const SegmentedControl: React.FC<Props> = ({
 };
 
 export default SegmentedControl;
+
+{
+  /* <SegmentedControl
+  segments={segments}
+  value={mode} // kontrol edilen kullanım
+  onChange={(k) => setMode(k)}
+  containerStyle={{ marginBottom: 16 }}
+  activeColor="#2563eb" // blue-600
+  inactiveColor="#4b5563" // gray-700
+  activeTextStyle={{ fontWeight: "700", color: "#fff" }}
+  inactiveTextStyle={{ fontWeight: "600" }}
+/>;
+<SegmentedControl
+  segments={[
+    { key: "movie", label: "Movie" },
+    { key: "tv", label: "Tv" },
+  ]}
+  value={contentType}
+  width={300}
+  initialIndex={1}
+  onChange={(key) => setContentType(key as "movie" | "tv")}
+/>; */
+}

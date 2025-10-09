@@ -44,13 +44,6 @@ const search = () => {
               onChangeText={(text: string) => setSearchQuery(text)}
             />
 
-            {!loading && !error && searchQuery.trim() && data.length > 0 && (
-              <Text className="text-xl text-white ">
-                Search Results for{" "}
-                <Text className="text-accent font-bold">{searchQuery}</Text>
-              </Text>
-            )}
-
             {/* <SegmentedControl
               segments={segments}
               value={mode} // kontrol edilen kullanım
@@ -61,7 +54,6 @@ const search = () => {
               activeTextStyle={{ fontWeight: "700", color: "#fff" }}
               inactiveTextStyle={{ fontWeight: "600" }}
             /> */}
-            {/* uncontrolled example */}
             <SegmentedControl
               segments={[
                 { key: "movie", label: "Movie" },
@@ -72,18 +64,24 @@ const search = () => {
               initialIndex={1}
               onChange={(key) => setContentType(key as "movie" | "tv")}
             />
-            <></>
+            {!loading && !error && searchQuery.trim() && data.length > 0 && (
+              <Text className="text-xl text-white mt-3">
+                Search Results for:
+                <Text className="text-accent font-bold">
+                  {" " + searchQuery}
+                </Text>
+              </Text>
+            )}
+            <View className="flex-1">
+              <GridList
+                contentType={contentType}
+                data={data}
+                loading={loading}
+                error={error}
+              />
+            </View>
           </View>
         }
-
-        <View className="flex-1 mt-5">
-          <GridList
-            contentType={contentType}
-            data={data}
-            loading={loading}
-            error={error}
-          />
-        </View>
       </ScrollView>
     </View>
   );
