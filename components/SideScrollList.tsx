@@ -25,6 +25,7 @@ const SideScrollList = ({
   if (error) {
     return <Text>Error: {error?.message}</Text>;
   }
+  console.log("Data " + data);
 
   const pathHead = contentType === "tv" ? "tv" : "movies";
   return (
@@ -32,7 +33,7 @@ const SideScrollList = ({
       <FlatList
         data={data}
         renderItem={({ item }) => (
-          <ContentCard {...item} routes={`${pathHead}/${item.id}`} />
+          <ContentCard {...item} contentType={contentType} item={item} />
         )}
         keyExtractor={(item) => item.id.toString()}
         horizontal

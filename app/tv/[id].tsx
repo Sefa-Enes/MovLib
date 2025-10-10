@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 
-const MovieDetails = () => {
+const TvDetails = () => {
   const { mediaObject } = useMediaContext();
   console.log("Media obj " + mediaObject);
 
@@ -32,7 +32,7 @@ const MovieDetails = () => {
       >
         <View className="flex-row items-center justify-center w-full">
           <Text className="text-center font-bold text-3xl text-white w-full">
-            {mediaObject?.title}
+            {mediaObject?.name}
           </Text>
         </View>
         <View className="flex-row ">
@@ -44,7 +44,7 @@ const MovieDetails = () => {
                   : "https://placehold.co/600x400/1a1a1a/ffffff.png",
               }}
               resizeMode="cover"
-              className={`rounded-lg mt-20 w-36 h-52`}
+              className={`rounded-lg mt-10 w-36 h-60`}
             />
           </TouchableOpacity>
         </View>
@@ -53,6 +53,6 @@ const MovieDetails = () => {
   );
 };
 
-export default MovieDetails;
+export default TvDetails;
 
 const styles = StyleSheet.create({});

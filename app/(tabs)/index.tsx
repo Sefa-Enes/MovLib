@@ -39,7 +39,6 @@ export default function Index() {
           tintColor={colors.secondary}
           style={{ width: 200, height: 100 }}
         />
-
         <SearchBox
           onPress={() => router.push("/search")}
           placeholder="Search a movie or series"
@@ -49,7 +48,6 @@ export default function Index() {
             <Text className="text-lg text-accent font-bold mt-5 ">
               Trending Movies
             </Text>
-
             <SideScrollList
               contentType="movie"
               data={movieData}
@@ -58,7 +56,6 @@ export default function Index() {
             />
           </>
         </View>
-
         <View className="flex-1 mt-5 mb-20">
           <Text className="text-lg text-accent font-bold mt-5">
             Trendind Series

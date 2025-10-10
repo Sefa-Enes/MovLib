@@ -208,26 +208,3 @@ const SegmentedControl: React.FC<Props> = ({
 };
 
 export default SegmentedControl;
-
-{
-  /* <SegmentedControl
-  segments={segments}
-  value={mode} // kontrol edilen kullanım
-  onChange={(k) => setMode(k)}
-  containerStyle={{ marginBottom: 16 }}
-  activeColor="#2563eb" // blue-600
-  inactiveColor="#4b5563" // gray-700
-  activeTextStyle={{ fontWeight: "700", color: "#fff" }}
-  inactiveTextStyle={{ fontWeight: "600" }}
-/>;
-<SegmentedControl
-  segments={[
-    { key: "movie", label: "Movie" },
-    { key: "tv", label: "Tv" },
-  ]}
-  value={contentType}
-  width={300}
-  initialIndex={1}
-  onChange={(key) => setContentType(key as "movie" | "tv")}
-/>; */
-}

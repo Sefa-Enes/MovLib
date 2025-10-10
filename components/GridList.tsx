@@ -33,8 +33,9 @@ const GridList = ({
         renderItem={({ item }) => (
           <ContentCard
             {...item}
-            routes={`${pathHead}/${item.id}`}
+            contentType={contentType}
             isGrid={true}
+            item={item}
           />
         )}
         keyExtractor={(item) => item.id.toString()}
