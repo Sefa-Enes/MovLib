@@ -17,7 +17,7 @@ const search = () => {
   const { data, loading, error } = useChoseFetch(contentType, searchQuery);
 
   return (
-    <View className="flex justify-center items-center bg-dark-200 w-screen h-screen">
+    <View className="flex-1 bg-dark-200">
       <Image
         source={require("@/assets/images/bg-image.png")}
         className="absolute w-full z-0 opacity-15"
@@ -62,14 +62,18 @@ const search = () => {
               initialIndex={1}
               onChange={(key) => setContentType(key as "movie" | "tv")}
             />
-            {!loading && !error && searchQuery.trim() && data.length > 0 && (
-              <Text className="text-xl text-white mt-3">
-                Search Results for:
-                <Text className="text-accent font-bold">
-                  {" " + searchQuery}
+            {data &&
+              !loading &&
+              !error &&
+              searchQuery.trim() &&
+              data.length > 0 && (
+                <Text className="text-xl text-white mt-3">
+                  Search Results for:
+                  <Text className="text-accent font-bold">
+                    {" " + searchQuery}
+                  </Text>
                 </Text>
-              </Text>
-            )}
+              )}
             <View className="flex-1">
               <GridList
                 contentType={contentType}

@@ -1,58 +1,59 @@
+import DetailsPage from "@/components/Page/DetailsPage";
 import { useMediaContext } from "@/context/GlobalContext";
-import { router } from "expo-router";
-import { X } from "lucide-react-native";
-import React from "react";
-import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import useFetch from "@/hooks/useFetch";
+import { fetchMovieDetails } from "@/services/api";
+import { useLocalSearchParams } from "expo-router";
+import React, { useEffect } from "react";
+import { ActivityIndicator, Text, View } from "react-native";
 
 const MovieDetails = () => {
-  const { mediaObject } = useMediaContext();
-  console.log("Media obj " + mediaObject);
+  const { mediaObject, setMediaObject } = useMediaContext();
+  const { id } = useLocalSearchParams();
+  const contentType = "movie";
+
+  // autoFetch'i kapattık, kontrol bizde
+  const { data, loading, error, refetch } = useFetch(
+    () => fetchMovieDetails({ id: Number(id) }),
+    false
+  );
+
+  // Sadece veri yoksa fetch et
+  useEffect(() => {
+    if (!mediaObject) {
+      refetch();
+    }
+  }, [mediaObject, id]);
+
+  useEffect(() => {
+    if (data && !mediaObject) {
+      setMediaObject(data);
+    }
+  }, [data]);
+
+  if (loading && !mediaObject) {
+    return (
+      <View className="flex-1 justify-center items-center bg-accent">
+        <ActivityIndicator size="large" color="#fff" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 justify-center items-center bg-accent">
+        <Text>Error: {error.message}</Text>
+      </View>
+    );
+  }
 
   return (
-    <View className="flex justify-center items-center bg-dark-200 w-screen h-screen">
-      <View className="flex-row  items-center w-[90%] h-20 mt-10 gap-x-1 justify-end">
-        <TouchableOpacity
-          onPress={router.back} //, implement all library
-          className="flex-row items-center justify-center gap-x-2 h-10 w-10 rounded-full"
-        >
-          <X className="text-accent font-bold" size={36} />
-        </TouchableOpacity>
-      </View>
-      <ScrollView
-        className="flex-1 p-5 w-full"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ minHeight: "100%", paddingBottom: 10 }}
-      >
-        <View className="flex-row items-center justify-center w-full">
-          <Text className="text-center font-bold text-3xl text-white w-full">
-            {mediaObject?.title}
-          </Text>
-        </View>
-        <View className="flex-row ">
-          <TouchableOpacity>
-            <Image
-              source={{
-                uri: mediaObject?.poster_path
-                  ? `https://image.tmdb.org/t/p/w500${mediaObject.poster_path}`
-                  : "https://placehold.co/600x400/1a1a1a/ffffff.png",
-              }}
-              resizeMode="cover"
-              className={`rounded-lg mt-20 w-36 h-52`}
-            />
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+    <View className="flex-1 bg-accent">
+      <DetailsPage
+        contentType={contentType}
+        mediaObject={mediaObject || data}
+      />
     </View>
   );
 };
 
 export default MovieDetails;
-
-const styles = StyleSheet.create({});

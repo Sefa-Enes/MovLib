@@ -25,7 +25,6 @@ const SideScrollList = ({
   if (error) {
     return <Text>Error: {error?.message}</Text>;
   }
-  console.log("Data " + data);
 
   const pathHead = contentType === "tv" ? "tv" : "movies";
   return (
@@ -38,7 +37,7 @@ const SideScrollList = ({
         keyExtractor={(item) => item.id.toString()}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingLeft: 5 }}
+        contentContainerStyle={{}}
       />
     </View>
   );

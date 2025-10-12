@@ -7,6 +7,8 @@
 //   }
 // };
 
+import { MediaItem, Movie, Tv } from "@/interface/interfaces";
+
 // fetch(url, options)
 //   .then(res => res.json())
 //   .then(json => console.log(json))
@@ -21,10 +23,14 @@ export const TMDB_CONFIG = {
   },
 };
 
-export const fetchMovies = async ({ query }: { query: string }) => {
+export const fetchMovies = async ({
+  query,
+}: {
+  query: string;
+}): Promise<Movie[]> => {
   const endpoint = query
     ? `${TMDB_CONFIG.BASE_URL}/search/movie?query=${encodeURIComponent(query)}`
-    : `${TMDB_CONFIG.BASE_URL}/discover/movie?sort_by=popularity.desc`;
+    : `${TMDB_CONFIG.BASE_URL}/discover/movie?include_adult=true&sort_by=popularity.desc`;
 
   const response = await fetch(endpoint, {
     method: "GET",
@@ -38,10 +44,76 @@ export const fetchMovies = async ({ query }: { query: string }) => {
   const data = await response.json();
   return data.results;
 };
-export const fetchSeries = async ({ query }: { query: string }) => {
+export const fetchSeries = async ({
+  query,
+}: {
+  query: string;
+}): Promise<Tv[]> => {
   const endpoint = query
     ? `${TMDB_CONFIG.BASE_URL}/search/tv?query=${encodeURIComponent(query)}`
     : `${TMDB_CONFIG.BASE_URL}/discover/tv?sort_by=popularity.desc`;
+
+  const response = await fetch(endpoint, {
+    method: "GET",
+    headers: TMDB_CONFIG.headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch series: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.results;
+};
+
+export const fetchMovieDetails = async ({
+  id,
+}: {
+  id: number;
+}): Promise<MediaItem> => {
+  const endpoint = `${TMDB_CONFIG.BASE_URL}/movie/${id}?language=en-US`;
+
+  const response = await fetch(endpoint, {
+    method: "GET",
+    headers: TMDB_CONFIG.headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch movie: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data;
+};
+export const fetchTvDetails = async ({
+  id,
+}: {
+  id: number;
+}): Promise<MediaItem> => {
+  const endpoint = `${TMDB_CONFIG.BASE_URL}/tv/${id}?language=en-US`;
+
+  const response = await fetch(endpoint, {
+    method: "GET",
+    headers: TMDB_CONFIG.headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch movie: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data;
+};
+
+export const fetchSimilar = async ({
+  contentType = "movie",
+
+  id,
+}: {
+  contentType?: "movie" | "tv";
+  id: number;
+}): Promise<MediaItem[]> => {
+  const endpoint = `${TMDB_CONFIG.BASE_URL}/${contentType}/${id}/similar?language=en-US&sort_by=popularity.desc&page=1`;
 
   const response = await fetch(endpoint, {
     method: "GET",

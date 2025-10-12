@@ -48,7 +48,7 @@ const _layout = () => {
           borderRadius: 50,
           marginHorizontal: 15,
           marginBottom: 20,
-          height: 60, // <-- Yüksekliği 70'den 60'a düşürdük
+          height: 60,
           position: "absolute",
         },
       }}

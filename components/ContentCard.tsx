@@ -27,7 +27,6 @@ const ContentCard = ({
   isGrid = false,
   item,
 }: CardProps) => {
-  console.log("itemim " + item);
   const { mediaObject, setMediaObject } = useMediaContext();
   const pathHead = contentType === "tv" ? "tv" : "movies";
   const handleRedirect = async () => {

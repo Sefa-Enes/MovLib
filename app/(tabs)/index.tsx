@@ -21,7 +21,7 @@ export default function Index() {
   } = useChoseFetch("tv");
 
   return (
-    <View className="flex justify-center items-center bg-dark-200 w-screen h-screen">
+    <View className="flex-1 bg-dark-200 ">
       <Image
         source={require("@/assets/images/bg-image.png")}
         className="absolute w-full z-0 opacity-15"
@@ -56,7 +56,7 @@ export default function Index() {
             />
           </>
         </View>
-        <View className="flex-1 mt-5 mb-20">
+        <View className="flex-1 mt-5 mb-28">
           <Text className="text-lg text-accent font-bold mt-5">
             Trendind Series
           </Text>
