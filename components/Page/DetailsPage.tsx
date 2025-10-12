@@ -1,9 +1,10 @@
 import useFetch from "@/hooks/useFetch";
 import { MediaItem } from "@/interface/interfaces";
 import { fetchSimilar } from "@/services/api";
+import { DiscoverMovieFilters } from "@/utils/queryBuilder";
 import { router } from "expo-router";
 import { ChevronDown, X } from "lucide-react-native";
-import React from "react";
+import React, { useEffect } from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RenderMovieGenres } from "../CategoryClickable";
@@ -11,17 +12,29 @@ import SideScrollList from "../SideScrollList";
 import Divider from "../ui/Divider";
 
 const DetailsPage = ({
+  setFilters,
+  setMediaObject,
   mediaObject,
   contentType = "movie",
 }: {
+  setFilters: (item: DiscoverMovieFilters | undefined) => void;
+  setMediaObject: (item: MediaItem | undefined) => void; // sadece değer alır
   mediaObject?: MediaItem;
   contentType?: "movie" | "tv";
 }) => {
   const insets = useSafeAreaInsets();
 
-  const { data, loading, error } = useFetch(() =>
-    fetchSimilar({ contentType: contentType, id: Number(mediaObject?.id) })
+  const { data, loading, error, refetch } = useFetch(
+    () =>
+      fetchSimilar({ contentType: contentType, id: Number(mediaObject?.id) }),
+    false
   );
+
+  useEffect(() => {
+    if (mediaObject) {
+      refetch();
+    }
+  }, [mediaObject]);
 
   return (
     <View
@@ -30,7 +43,9 @@ const DetailsPage = ({
     >
       <View className="flex-row items-center w-[90%] h-20 gap-x-1 justify-end">
         <TouchableOpacity
-          onPress={router.back}
+          onPress={() =>
+            router.canGoBack() ? router.back() : router.push("/(tabs)")
+          }
           className="flex-row items-center justify-center gap-x-2 h-10 w-10 rounded-full"
         >
           <X className="text-accent font-bold" size={36} />
@@ -89,9 +104,17 @@ const DetailsPage = ({
             <View>
               <Text className="text-gray-300 mb-1">🎬 Category: </Text>
               <RenderMovieGenres
-                ids={mediaObject?.genre_ids}
-                onGenrePress={(genreName) => {
-                  console.log("Clicked genre:", genreName);
+                ids={
+                  mediaObject?.genre_ids ||
+                  mediaObject?.genres?.map((g) => ("id" in g ? g.id : g))
+                }
+                onGenrePress={(genreId) => {
+                  setFilters({
+                    include_adult: true,
+                    with_genres: [genreId],
+                    sort_by: "popularity.desc",
+                  });
+                  router.push("/(tabs)/search");
                 }}
               />
             </View>
@@ -123,7 +146,11 @@ const DetailsPage = ({
           </View>
         </View>
         <Divider dividerStyle={{ marginTop: 20, marginBottom: 10 }}></Divider>
-        <TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => {
+            setMediaObject(undefined);
+          }}
+        >
           <View className="flex-row items-center justify-center">
             <ChevronDown />
             <Text className="text-gray-300 text-gray font-medium">

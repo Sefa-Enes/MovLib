@@ -2,6 +2,8 @@ import { colors } from "@/components/colors";
 import GridList from "@/components/GridList";
 import SearchBox from "@/components/SearchBox";
 import SegmentedControl from "@/components/ui/SegmentedButton";
+import { getMovieGenresAsString } from "@/constants/Genre";
+import { useMediaContext } from "@/context/GlobalContext";
 import { useChoseFetch } from "@/hooks/useChoseFetch";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -11,10 +13,14 @@ const search = () => {
   const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState<string>("");
-
   const [contentType, setContentType] = useState<"movie" | "tv">("movie");
 
-  const { data, loading, error } = useChoseFetch(contentType, searchQuery);
+  const { filters, setFilters } = useMediaContext();
+  const { data, loading, error } = useChoseFetch(
+    contentType,
+    searchQuery,
+    filters
+  );
 
   return (
     <View className="flex-1 bg-dark-200">
@@ -71,6 +77,24 @@ const search = () => {
                   Search Results for:
                   <Text className="text-accent font-bold">
                     {" " + searchQuery}
+                  </Text>
+                </Text>
+              )}
+            {data &&
+              !loading &&
+              !error &&
+              filters?.with_genres &&
+              data.length > 0 && (
+                <Text className="text-xl text-white mt-3">
+                  Showing
+                  <Text className="text-accent font-bold">
+                    {" " +
+                      getMovieGenresAsString(
+                        Array.isArray(filters.with_genres)
+                          ? filters.with_genres
+                          : [filters.with_genres].filter(Boolean)
+                      ) +
+                      " Genre"}
                   </Text>
                 </Text>
               )}

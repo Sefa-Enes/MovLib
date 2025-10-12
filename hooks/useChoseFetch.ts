@@ -1,27 +1,35 @@
 // useContent.ts
 import { fetchMovies, fetchSeries } from "@/services/api";
+import { DiscoverMovieFilters } from "@/utils/queryBuilder";
 import { useCallback, useEffect } from "react";
 import useFetch from "./useFetch";
 
-export const useChoseFetch = (type: "movie" | "tv", query: string = "") => {
+export const useChoseFetch = (
+  type: "movie" | "tv",
+  query: string = "",
+  filters: DiscoverMovieFilters | undefined = undefined
+) => {
   const fetchFn = useCallback(async () => {
     return type === "movie"
-      ? await fetchMovies({ query })
-      : await fetchSeries({ query });
-  }, [type, query]);
+      ? await fetchMovies({ query, filters })
+      : await fetchSeries({
+          query,
+          // ,filters
+        });
+  }, [type, query, filters]);
 
   const { data, loading, error, refetch, reset } = useFetch(fetchFn, false);
 
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
-      if (type || query.trim()) {
+      if (type || query.trim() || filters) {
         await refetch();
       } else {
         reset();
       }
     }, 500);
     return () => clearTimeout(timeoutId); // sadece type değişince manuel fetch
-  }, [type, query]);
+  }, [type, query, filters]);
 
   return { data, loading, error };
 };

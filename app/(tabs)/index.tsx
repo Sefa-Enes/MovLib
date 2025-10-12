@@ -15,6 +15,54 @@ export default function Index() {
     error: movieError,
   } = useChoseFetch("movie");
   const {
+    data: fantasyMovieData,
+    loading: fantasyMovieLoading,
+    error: fantasyMovieError,
+  } = useChoseFetch("movie", undefined, {
+    with_genres: 14,
+    sort_by: "popularity.desc",
+  });
+  const {
+    data: horrorMovieData,
+    loading: horrorMovieLoading,
+    error: horrorMovieError,
+  } = useChoseFetch("movie", undefined, {
+    with_genres: 27,
+    sort_by: "popularity.desc",
+  });
+  const {
+    data: scifiMovieData,
+    loading: scifiMovieLoading,
+    error: scifiMovieError,
+  } = useChoseFetch("movie", undefined, {
+    with_genres: 878,
+    sort_by: "popularity.desc",
+  });
+  const {
+    data: animationMovieData,
+    loading: animationMovieLoading,
+    error: animationMovieError,
+  } = useChoseFetch("movie", undefined, {
+    with_genres: 16,
+    sort_by: "popularity.desc",
+  });
+  // const {
+  //   data: scifiMovieData,
+  //   loading: scifiMovieLoading,
+  //   error: scifiMovieError,
+  // } = useChoseFetch("movie", undefined, {
+  //   with_genres: 878,
+  //   sort_by: "popularity.desc",
+  // });
+  // const {
+  //   data: scifiMovieData,
+  //   loading: scifiMovieLoading,
+  //   error: scifiMovieError,
+  // } = useChoseFetch("movie", undefined, {
+  //   with_genres: 878,
+  //   sort_by: "popularity.desc",
+  // });
+  const {
     data: tvData,
     loading: tvLoading,
     error: tvError,
@@ -43,29 +91,75 @@ export default function Index() {
           onPress={() => router.push("/search")}
           placeholder="Search a movie or series"
         />
-        <View className="flex-1 mt-5">
-          <>
-            <Text className="text-lg text-accent font-bold mt-5 ">
-              Trending Movies
+        <View className="mb-20">
+          <View className="flex-1 mt-5">
+            <>
+              <Text className="text-lg text-accent font-bold mt-5 ">
+                Trending Movies
+              </Text>
+              <SideScrollList
+                contentType="movie"
+                data={movieData}
+                loading={movieLoading}
+                error={movieError}
+              />
+            </>
+          </View>
+          <View className="flex-1 mt-5">
+            <Text className="text-lg text-accent font-bold mt-5">
+              Trending Series
+            </Text>
+            <SideScrollList
+              contentType="tv"
+              data={tvData}
+              loading={tvLoading}
+              error={tvError}
+            />
+          </View>
+          <View className="flex-1 mt-5">
+            <Text className="text-lg text-accent font-bold mt-5">
+              Trending Horror Movies
             </Text>
             <SideScrollList
               contentType="movie"
-              data={movieData}
-              loading={movieLoading}
-              error={movieError}
+              data={horrorMovieData}
+              loading={horrorMovieLoading}
+              error={horrorMovieError}
             />
-          </>
-        </View>
-        <View className="flex-1 mt-5 mb-28">
-          <Text className="text-lg text-accent font-bold mt-5">
-            Trendind Series
-          </Text>
-          <SideScrollList
-            contentType="tv"
-            data={tvData}
-            loading={tvLoading}
-            error={tvError}
-          />
+          </View>
+          <View className="flex-1 mt-5">
+            <Text className="text-lg text-accent font-bold mt-5">
+              Trendling Sci-Fi Movies
+            </Text>
+            <SideScrollList
+              contentType="movie"
+              data={scifiMovieData}
+              loading={scifiMovieLoading}
+              error={scifiMovieError}
+            />
+          </View>
+          <View className="flex-1 mt-5">
+            <Text className="text-lg text-accent font-bold mt-5">
+              Trending Fantasy Movies
+            </Text>
+            <SideScrollList
+              contentType="movie"
+              data={fantasyMovieData}
+              loading={fantasyMovieLoading}
+              error={fantasyMovieError}
+            />
+          </View>
+          <View className="flex-1 mt-5">
+            <Text className="text-lg text-accent font-bold mt-5">
+              Trending Animation Movies
+            </Text>
+            <SideScrollList
+              contentType="movie"
+              data={animationMovieData}
+              loading={animationMovieLoading}
+              error={animationMovieError}
+            />
+          </View>
         </View>
       </ScrollView>
     </View>

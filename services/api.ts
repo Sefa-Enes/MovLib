@@ -1,18 +1,8 @@
-// const url = 'https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=1&sort_by=popularity.desc';
-// const options = {
-//   method: 'GET',
-//   headers: {
-//     accept: 'application/json',
-//     Authorization: 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI5ZTk4MGIyN2E3MWUzNjE3YjJiMDkzYjczMDQ5ODM4OSIsIm5iZiI6MTc1OTgyMTU0OC40MDMsInN1YiI6IjY4ZTRiZWVjYWYwNmI5N2IzMjk2MWNmYSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.vNFfhEy5PL3Gr7_Nl1SH31zpkLJDoliQIGr8utd91OM'
-//   }
-// };
-
 import { MediaItem, Movie, Tv } from "@/interface/interfaces";
-
-// fetch(url, options)
-//   .then(res => res.json())
-//   .then(json => console.log(json))
-//   .catch(err => console.error(err));
+import {
+  buildDiscoverMovieParams,
+  DiscoverMovieFilters,
+} from "@/utils/queryBuilder";
 
 export const TMDB_CONFIG = {
   BASE_URL: "https://api.themoviedb.org/3",
@@ -25,12 +15,17 @@ export const TMDB_CONFIG = {
 
 export const fetchMovies = async ({
   query,
+  filters,
 }: {
   query: string;
+  filters?: DiscoverMovieFilters;
 }): Promise<Movie[]> => {
+  const queryParams = buildDiscoverMovieParams(filters);
   const endpoint = query
     ? `${TMDB_CONFIG.BASE_URL}/search/movie?query=${encodeURIComponent(query)}`
-    : `${TMDB_CONFIG.BASE_URL}/discover/movie?include_adult=true&sort_by=popularity.desc`;
+    : `${TMDB_CONFIG.BASE_URL}/discover/movie?${
+        queryParams || "sort_by=popularity.desc"
+      }`;
 
   const response = await fetch(endpoint, {
     method: "GET",

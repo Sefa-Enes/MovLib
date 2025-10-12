@@ -49,6 +49,7 @@ const MovieDetails = () => {
   return (
     <View className="flex-1 bg-accent">
       <DetailsPage
+        setMediaObject={setMediaObject}
         contentType={contentType}
         mediaObject={mediaObject || data}
       />

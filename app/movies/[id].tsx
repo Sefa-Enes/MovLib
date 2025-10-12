@@ -7,7 +7,8 @@ import React, { useEffect } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 
 const MovieDetails = () => {
-  const { mediaObject, setMediaObject } = useMediaContext();
+  const { mediaObject, setMediaObject, filters, setFilters } =
+    useMediaContext();
   const { id } = useLocalSearchParams();
   const contentType = "movie";
 
@@ -49,6 +50,8 @@ const MovieDetails = () => {
   return (
     <View className="flex-1 bg-accent">
       <DetailsPage
+        setFilters={setFilters}
+        setMediaObject={setMediaObject}
         contentType={contentType}
         mediaObject={mediaObject || data}
       />

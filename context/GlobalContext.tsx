@@ -1,9 +1,13 @@
 import { MediaItem } from "@/interface/interfaces";
+import { DiscoverMovieFilters } from "@/utils/queryBuilder";
 import React, { createContext, ReactNode, useContext, useState } from "react";
 
 interface MediaContextType {
   mediaObject: MediaItem | undefined;
   setMediaObject: (item: MediaItem | undefined) => void;
+
+  filters: DiscoverMovieFilters | undefined;
+  setFilters: (item: DiscoverMovieFilters | undefined) => void;
 }
 
 const MediaContext = createContext<MediaContextType | undefined>(undefined);
@@ -24,9 +28,14 @@ export const MediaProvider: React.FC<MediaProviderProps> = ({ children }) => {
   const [mediaObject, setMediaObject] = useState<MediaItem | undefined>(
     undefined
   );
+  const [filters, setFilters] = useState<DiscoverMovieFilters | undefined>(
+    undefined
+  );
 
   return (
-    <MediaContext.Provider value={{ mediaObject, setMediaObject }}>
+    <MediaContext.Provider
+      value={{ mediaObject, setMediaObject, filters, setFilters }}
+    >
       {children}
     </MediaContext.Provider>
   );
