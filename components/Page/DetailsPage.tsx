@@ -3,8 +3,8 @@ import { MediaItem } from "@/interface/interfaces";
 import { fetchSimilar } from "@/services/api";
 import { DiscoverMovieFilters } from "@/utils/queryBuilder";
 import { router } from "expo-router";
-import { ChevronDown, X } from "lucide-react-native";
-import React, { useEffect } from "react";
+import { ChevronDown, ChevronUp, X } from "lucide-react-native";
+import React, { useEffect, useState } from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RenderMovieGenres } from "../CategoryClickable";
@@ -12,11 +12,15 @@ import SideScrollList from "../SideScrollList";
 import Divider from "../ui/Divider";
 
 const DetailsPage = ({
+  detailData,
+  refetchDetails,
   setFilters,
   setMediaObject,
   mediaObject,
   contentType = "movie",
 }: {
+  detailData: MediaItem | undefined;
+  refetchDetails: () => Promise<void>;
   setFilters: (item: DiscoverMovieFilters | undefined) => void;
   setMediaObject: (item: MediaItem | undefined) => void; // sadece değer alır
   mediaObject?: MediaItem;
@@ -24,11 +28,17 @@ const DetailsPage = ({
 }) => {
   const insets = useSafeAreaInsets();
 
-  const { data, loading, error, refetch } = useFetch(
+  const {
+    data: similarData,
+    loading: similarLoading,
+    error: similarError,
+    refetch,
+  } = useFetch(
     () =>
       fetchSimilar({ contentType: contentType, id: Number(mediaObject?.id) }),
     false
   );
+  const [detailDrawer, setDetailDrawer] = useState<boolean>(false);
 
   useEffect(() => {
     if (mediaObject) {
@@ -110,7 +120,6 @@ const DetailsPage = ({
                 }
                 onGenrePress={(genreId) => {
                   setFilters({
-                    include_adult: true,
                     with_genres: [genreId],
                     sort_by: "popularity.desc",
                   });
@@ -148,11 +157,16 @@ const DetailsPage = ({
         <Divider dividerStyle={{ marginTop: 20, marginBottom: 10 }}></Divider>
         <TouchableOpacity
           onPress={() => {
-            setMediaObject(undefined);
+            setDetailDrawer(detailData ? false : true);
+            refetchDetails();
           }}
         >
           <View className="flex-row items-center justify-center">
-            <ChevronDown />
+            {!detailDrawer ? (
+              <ChevronDown className="text-white" />
+            ) : (
+              <ChevronUp className="text-white" />
+            )}
             <Text className="text-gray-300 text-gray font-medium">
               More Details
             </Text>
@@ -177,9 +191,9 @@ const DetailsPage = ({
             </Text>
             <SideScrollList
               contentType="movie"
-              data={data}
-              loading={loading}
-              error={error}
+              data={similarData}
+              loading={similarLoading}
+              error={similarError}
             />
           </>
         </View>
