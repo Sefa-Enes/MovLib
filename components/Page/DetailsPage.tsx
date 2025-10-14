@@ -7,9 +7,10 @@ import { ChevronDown, ChevronUp, X } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { RenderMovieGenres } from "../CategoryClickable";
+import { RenderListItems } from "../CategoryClickable";
 import SideScrollList from "../SideScrollList";
 import Divider from "../ui/Divider";
+import ExpandableView from "../ui/ExpandableView";
 
 const DetailsPage = ({
   detailData,
@@ -51,7 +52,7 @@ const DetailsPage = ({
       className="flex-1 bg-dark-200"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
-      <View className="flex-row items-center w-[90%] h-20 gap-x-1 justify-end">
+      <View className="flex-row items-center w-[95%] h-20 gap-x-1 justify-end">
         <TouchableOpacity
           onPress={() =>
             router.canGoBack() ? router.back() : router.push("/(tabs)")
@@ -93,7 +94,7 @@ const DetailsPage = ({
             {/* Yayın Tarihi */}
             {mediaObject?.release_date && (
               <Text className="text-gray-300" numberOfLines={2}>
-                📅 Release Date:{" "}
+                Release Date:{" "}
                 <Text className="text-white font-medium">
                   {new Date(mediaObject.release_date).toLocaleDateString()}
                 </Text>
@@ -111,16 +112,17 @@ const DetailsPage = ({
             </View>
 
             {/* Kategori */}
-            <View>
-              <Text className="text-gray-300 mb-1">🎬 Category: </Text>
-              <RenderMovieGenres
+            <View className="flex flex-wrap flex-row">
+              {/* <Text className="text-gray-300 mb-1">Category: </Text> */}
+              <RenderListItems
+                header="Category: "
                 ids={
                   mediaObject?.genre_ids ||
                   mediaObject?.genres?.map((g) => ("id" in g ? g.id : g))
                 }
                 onGenrePress={(genreId) => {
                   setFilters({
-                    with_genres: [genreId],
+                    with_genres: [Number(genreId)],
                     sort_by: "popularity.desc",
                   });
                   router.push("/(tabs)/search");
@@ -131,7 +133,7 @@ const DetailsPage = ({
             {/* Popülerlik */}
             {mediaObject?.popularity && (
               <Text className="text-gray-300" numberOfLines={1}>
-                🔥 Popularity:{" "}
+                Popularity:{" "}
                 <Text className="text-white font-medium">
                   {Math.round(mediaObject.popularity)}
                 </Text>
@@ -140,7 +142,7 @@ const DetailsPage = ({
 
             {mediaObject?.original_language && (
               <Text className="text-gray-300  " numberOfLines={1}>
-                🌐 Language:{" "}
+                Language:{" "}
                 <Text className="text-white  uppercase font-medium">
                   {mediaObject.original_language}
                 </Text>
@@ -155,23 +157,80 @@ const DetailsPage = ({
           </View>
         </View>
         <Divider dividerStyle={{ marginTop: 20, marginBottom: 10 }}></Divider>
-        <TouchableOpacity
-          onPress={() => {
-            setDetailDrawer(detailData ? false : true);
-            refetchDetails();
-          }}
-        >
-          <View className="flex-row items-center justify-center">
+        <View>
+          <ExpandableView expanded={detailDrawer} expheight={150}>
+            {/* Production Companies */}
+            <View className="flex flex-wrap flex-row">
+              <RenderListItems
+                header="Production: "
+                ids={detailData?.production_companies?.map((g) =>
+                  "id" in g ? g.id : g
+                )}
+                onGenrePress={(companyName) => {
+                  setFilters({
+                    with_companies: [String(companyName)],
+                    sort_by: "popularity.desc",
+                  });
+                  router.push("/(tabs)/search");
+                }}
+                idList={detailData?.production_companies?.reduce(
+                  (acc, item) => {
+                    acc[item.id] = item.name; // id → name eşle
+                    return acc;
+                  },
+                  {} as Record<number, string>
+                )}
+              />
+            </View>
+            {/* Franchise */}
+            <View className="flex flex-wrap flex-row">
+              <RenderListItems
+                header="Franchise: "
+                ids={detailData?.production_companies?.map((g) =>
+                  "id" in g ? g.id : g
+                )}
+                onGenrePress={(companyName) => {
+                  setFilters({
+                    with_companies: [String(companyName)],
+                    sort_by: "popularity.desc",
+                  });
+                  router.push("/(tabs)/search");
+                }}
+                idList={detailData?.production_companies?.reduce(
+                  (acc, item) => {
+                    acc[item.id] = item.name; // id → name eşle
+                    return acc;
+                  },
+                  {} as Record<number, string>
+                )}
+              />
+            </View>
+          </ExpandableView>
+
+          <TouchableOpacity
+            onPress={() => {
+              setDetailDrawer(!detailDrawer);
+              !detailData && refetchDetails();
+            }}
+            className="flex-row items-top justify-center mt-2"
+          >
             {!detailDrawer ? (
-              <ChevronDown className="text-white" />
+              <>
+                <ChevronDown className="text-white" />
+                <Text className="ml-3 text-gray-300 font-medium">
+                  More Details
+                </Text>
+              </>
             ) : (
-              <ChevronUp className="text-white" />
+              <>
+                <ChevronUp className="text-white" />
+                <Text className="ml-3 text-gray-300 font-medium">
+                  Less Details
+                </Text>
+              </>
             )}
-            <Text className="text-gray-300 text-gray font-medium">
-              More Details
-            </Text>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
         <Divider dividerStyle={{ marginTop: 10, marginBottom: 10 }}></Divider>
         <View className="flex-row">
           {mediaObject?.overview && (

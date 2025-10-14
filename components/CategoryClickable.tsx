@@ -2,29 +2,34 @@ import { MovieGenreId } from "@/constants/Genre";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-export const RenderMovieGenres = ({
+export const RenderListItems = ({
   ids,
   onGenrePress,
+  header,
+  idList = MovieGenreId,
 }: {
   ids?: number[];
-  onGenrePress?: (genreId: number) => void;
+  onGenrePress?: (genreId: number | string) => void;
+  header?: string;
+  idList?: Record<number, string>;
 }) => {
   if (!ids || ids.length === 0) {
     return <Text className="text-gray-400">Unknown</Text>;
   }
 
   return (
-    <View className="flex-row flex-wrap">
+    <View style={styles.container}>
+      <Text className="text-gray-300">{header}</Text>
       {ids.map((id, index) => {
-        const genreName = MovieGenreId[id];
-        if (!genreName) return null;
+        const item = idList[id];
+        if (!item) return null;
         return (
           <View key={id} className="flex-row items-center">
             <TouchableOpacity
-              onPress={() => onGenrePress && onGenrePress(id)}
+              onPress={() => onGenrePress && onGenrePress(id)} // id number'dır, ama zaten union ile destekleniyor
               activeOpacity={0.7}
             >
-              <Text className="text-white font-medium">{genreName}</Text>
+              <Text className="text-white font-medium">{item}</Text>
             </TouchableOpacity>
             {index < ids.length - 1 && (
               <Text className="text-gray-400">, </Text>
