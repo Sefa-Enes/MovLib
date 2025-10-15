@@ -31,7 +31,6 @@ export interface DiscoverMovieFilters extends Sort {
   region?: string;
   release_date_gte?: string;
   release_date_lte?: string;
-
   vote_average_gte?: number;
   vote_average_lte?: number;
   vote_count_gte?: number;

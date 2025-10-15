@@ -23,7 +23,7 @@ const ExpandableView = ({
   return (
     <Animated.View style={{ height }}>
       {/* Only render children when expanded if you want to hide content completely */}
-      {expanded && <View>{children}</View>}
+      {expanded && <View className="space-y-2">{children}</View>}
     </Animated.View>
   );
 };

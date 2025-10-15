@@ -5,7 +5,14 @@ import { DiscoverMovieFilters } from "@/utils/queryBuilder";
 import { router } from "expo-router";
 import { ChevronDown, ChevronUp, X } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import {
+  Image,
+  Modal,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RenderListItems } from "../CategoryClickable";
 import SideScrollList from "../SideScrollList";
@@ -40,6 +47,7 @@ const DetailsPage = ({
     false
   );
   const [detailDrawer, setDetailDrawer] = useState<boolean>(false);
+  const [posterModalOpen, setPosterModalOpen] = useState(false);
 
   useEffect(() => {
     if (mediaObject) {
@@ -78,7 +86,10 @@ const DetailsPage = ({
         </View>
 
         <View id="upperSection" className="flex-row mt-6 gap-3">
-          <TouchableOpacity className="shrink-0">
+          <TouchableOpacity
+            className="shrink-0"
+            onPress={() => setPosterModalOpen(true)}
+          >
             <Image
               source={{
                 uri: mediaObject?.poster_path
@@ -89,7 +100,28 @@ const DetailsPage = ({
               className="rounded-lg w-44 h-60"
             />
           </TouchableOpacity>
-
+          <Modal
+            visible={posterModalOpen}
+            transparent={false}
+            onRequestClose={() => setPosterModalOpen(false)}
+          >
+            <View className="flex-1 bg-black justify-center items-center ">
+              <TouchableOpacity
+                onPress={() => setPosterModalOpen(false)}
+                className="flex-1 w-full"
+              >
+                <Image
+                  source={{
+                    uri: mediaObject?.poster_path
+                      ? `https://image.tmdb.org/t/p/w500${mediaObject.poster_path}`
+                      : "https://placehold.co/400x600/1a1a1a/ffffff.png",
+                  }}
+                  className="w-full h-full"
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            </View>
+          </Modal>
           <View className="flex-1 flex-col space-y-2">
             {/* Yayın Tarihi */}
             {mediaObject?.release_date && (
@@ -158,53 +190,55 @@ const DetailsPage = ({
         </View>
         <Divider dividerStyle={{ marginTop: 20, marginBottom: 10 }}></Divider>
         <View>
-          <ExpandableView expanded={detailDrawer} expheight={150}>
+          <ExpandableView expanded={detailDrawer} expheight={200}>
             {/* Production Companies */}
-            <View className="flex flex-wrap flex-row">
-              <RenderListItems
-                header="Production: "
-                ids={detailData?.production_companies?.map((g) =>
-                  "id" in g ? g.id : g
-                )}
-                onGenrePress={(companyName) => {
-                  setFilters({
-                    with_companies: [String(companyName)],
-                    sort_by: "popularity.desc",
-                  });
-                  router.push("/(tabs)/search");
-                }}
-                idList={detailData?.production_companies?.reduce(
-                  (acc, item) => {
-                    acc[item.id] = item.name; // id → name eşle
-                    return acc;
-                  },
-                  {} as Record<number, string>
-                )}
-              />
-            </View>
-            {/* Franchise */}
-            <View className="flex flex-wrap flex-row">
-              <RenderListItems
-                header="Franchise: "
-                ids={detailData?.production_companies?.map((g) =>
-                  "id" in g ? g.id : g
-                )}
-                onGenrePress={(companyName) => {
-                  setFilters({
-                    with_companies: [String(companyName)],
-                    sort_by: "popularity.desc",
-                  });
-                  router.push("/(tabs)/search");
-                }}
-                idList={detailData?.production_companies?.reduce(
-                  (acc, item) => {
-                    acc[item.id] = item.name; // id → name eşle
-                    return acc;
-                  },
-                  {} as Record<number, string>
-                )}
-              />
-            </View>
+            {detailData?.production_companies && (
+              <View className="flex flex-wrap flex-row">
+                <RenderListItems
+                  header="Production: "
+                  ids={detailData?.production_companies?.map((g) =>
+                    "id" in g ? g.id : g
+                  )}
+                  onGenrePress={(companyName) => {
+                    setFilters({
+                      with_companies: [String(companyName)],
+                      sort_by: "popularity.desc",
+                    });
+                    router.push("/(tabs)/search");
+                  }}
+                  idList={detailData?.production_companies?.reduce(
+                    (acc, item) => {
+                      acc[item.id] = item.name; // id → name eşle
+                      return acc;
+                    },
+                    {} as Record<number, string>
+                  )}
+                />
+              </View>
+            )}
+
+            {/* Budget */}
+            {detailData?.budget ? (
+              <View className="flex flex-wrap flex-row">
+                <Text className="text-gray-300">
+                  Budget:{" "}
+                  <Text className="text-white">
+                    ${detailData.budget / 1000000}M
+                  </Text>
+                </Text>
+              </View>
+            ) : null}
+            {/* Revenue */}
+            {detailData?.revenue ? (
+              <View className="flex flex-wrap flex-row">
+                <Text className="text-gray-300">
+                  Revenue:{" "}
+                  <Text className="text-white">
+                    ${(detailData.revenue / 1000000).toFixed(2)}M
+                  </Text>
+                </Text>
+              </View>
+            ) : null}
           </ExpandableView>
 
           <TouchableOpacity

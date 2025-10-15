@@ -1,4 +1,5 @@
 import { colors } from "@/components/colors";
+import { FilterModal } from "@/components/FilterModal";
 import GridList from "@/components/GridList";
 import SearchBox from "@/components/SearchBox";
 import SegmentedControl from "@/components/ui/SegmentedButton";
@@ -6,8 +7,16 @@ import { getMovieGenresAsString } from "@/constants/Genre";
 import { useMediaContext } from "@/context/GlobalContext";
 import { useChoseFetch } from "@/hooks/useChoseFetch";
 import { useRouter } from "expo-router";
+import { X } from "lucide-react-native";
 import React, { useState } from "react";
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const search = () => {
   const router = useRouter();
@@ -21,6 +30,7 @@ const search = () => {
     searchQuery,
     filters
   );
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
 
   return (
     <View className="flex-1 bg-dark-200">
@@ -43,11 +53,14 @@ const search = () => {
         />
         {
           <View className="flex-1 mt-5">
-            <SearchBox
-              placeholder="Search a movie or series"
-              value={searchQuery}
-              onChangeText={(text: string) => setSearchQuery(text)}
-            />
+            <View className="flex-row w-full">
+              <SearchBox
+                placeholder="Search a movie or series"
+                value={searchQuery}
+                onChangeText={(text: string) => setSearchQuery(text)}
+              />
+              <FilterModal setFilters={setFilters} />
+            </View>
 
             <SegmentedControl
               segments={[
@@ -64,30 +77,68 @@ const search = () => {
               !error &&
               searchQuery.trim() &&
               data.length > 0 && (
-                <Text className="text-xl text-white mt-3">
-                  Search Results for:
-                  <Text className="text-accent font-bold">
-                    {" " + searchQuery}
-                  </Text>
-                </Text>
+                <>
+                  <View className="flex-row items-center w-dull gap-x-1 justify-evenly">
+                    <Text className="text-xl text-white mt-3">
+                      Search Results for:
+                      <Text className="text-accent font-bold">
+                        {" " + searchQuery}
+                      </Text>
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setSearchQuery("")}
+                      className="flex-row items-center justify-center gap-x-2 h-10 w-10 rounded-full"
+                    >
+                      <X className="text-accent font-bold" size={36} />
+                    </TouchableOpacity>
+                  </View>
+                </>
               )}
             {data &&
               !loading &&
               !error &&
               filters?.with_genres &&
               data.length > 0 && (
-                <Text className="text-xl text-white mt-3">
-                  Showing
-                  <Text className="text-accent font-bold">
-                    {" " +
-                      getMovieGenresAsString(
-                        Array.isArray(filters.with_genres)
-                          ? filters.with_genres
-                          : [filters.with_genres].filter(Boolean)
-                      ) +
-                      " Genre"}
+                <View className="flex-row items-center w-dull gap-x-1 mt-3 justify-between">
+                  <Text className="text-xl text-white ">
+                    Showing
+                    <Text className="text-accent font-bold">
+                      {" " +
+                        getMovieGenresAsString(
+                          Array.isArray(filters.with_genres)
+                            ? filters.with_genres
+                            : [filters.with_genres].filter(Boolean)
+                        ) +
+                        " Genre"}
+                    </Text>
                   </Text>
-                </Text>
+                  <TouchableOpacity
+                    onPress={() => setFilters(undefined)}
+                    className="flex-row items-center justify-center gap-x-2 h-8 w-8 rounded-full"
+                  >
+                    <X className="text-accent font-bold" size={24} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            {data &&
+              !loading &&
+              !error &&
+              filters?.with_companies &&
+              data.length > 0 && (
+                <View className="flex-row items-center w-dull gap-x-1 mt-3 justify-between">
+                  <Text className="text-xl text-white mt-3">
+                    Showing
+                    <Text className="text-accent font-bold">
+                      {" " + filters.with_companies + " Company"}
+                    </Text>
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setFilters(undefined)}
+                    className="flex-row items-center justify-center gap-x-2 h-8 w-8 rounded-full"
+                  >
+                    <X className="text-accent font-bold" size={24} />
+                  </TouchableOpacity>
+                </View>
               )}
             <View className="flex-1">
               <GridList
