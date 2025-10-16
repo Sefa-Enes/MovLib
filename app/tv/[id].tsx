@@ -6,8 +6,9 @@ import { useLocalSearchParams } from "expo-router";
 import React, { useEffect } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 
-const MovieDetails = () => {
-  const { mediaObject, setMediaObject } = useMediaContext();
+const TvDetails = () => {
+  const { mediaObject, setMediaObject, filters, setFilters } =
+    useMediaContext();
   const { id } = useLocalSearchParams();
   const contentType = "tv";
 
@@ -52,9 +53,12 @@ const MovieDetails = () => {
         setMediaObject={setMediaObject}
         contentType={contentType}
         mediaObject={mediaObject || data}
+        detailData={undefined}
+        setFilters={setFilters}
+        refetchDetails={refetch}
       />
     </View>
   );
 };
 
-export default MovieDetails;
+export default TvDetails;

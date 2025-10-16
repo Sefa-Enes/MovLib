@@ -27,7 +27,7 @@ const ContentCard = ({
   isGrid = false,
   item,
 }: CardProps) => {
-  const { mediaObject, setMediaObject } = useMediaContext();
+  const { setMediaObject } = useMediaContext();
   const pathHead = contentType === "tv" ? "tv" : "movies";
   const handleRedirect = async () => {
     await new Promise((resolve) => {
@@ -53,12 +53,17 @@ const ContentCard = ({
       />
       {!isGrid && (
         <>
-          <Text
-            numberOfLines={1}
-            className="text-white text-xs font-semibold mt-1 mb-1"
-          >
-            {title || name}
-          </Text>
+          <View className="flex-row justify-between mt-1 mb-1">
+            <Text
+              numberOfLines={1}
+              className="text-white text-xs font-semibold"
+            >
+              {title || name}
+            </Text>
+            <Text className="text-white text-xs font-semibold">
+              {release_date?.split("-")[0] || first_air_date?.split("-")[0]}
+            </Text>
+          </View>
 
           <View className="flex-row items-center gap-x-1 justify-between">
             <View className="flex-row items-center">

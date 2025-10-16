@@ -51,11 +51,11 @@ const MovieDetails = () => {
     <View className="flex-1 bg-accent">
       <DetailsPage
         detailData={data}
-        refetchDetails={refetch}
-        setFilters={setFilters}
         setMediaObject={setMediaObject}
         contentType={contentType}
         mediaObject={mediaObject || data}
+        setFilters={setFilters}
+        refetchDetails={refetch}
       />
     </View>
   );

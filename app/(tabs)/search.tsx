@@ -6,9 +6,11 @@ import SegmentedControl from "@/components/ui/SegmentedButton";
 import { getMovieGenresAsString } from "@/constants/Genre";
 import { useMediaContext } from "@/context/GlobalContext";
 import { useChoseFetch } from "@/hooks/useChoseFetch";
+import useFetch from "@/hooks/useFetch";
+import { fetchCompany } from "@/services/api";
 import { useRouter } from "expo-router";
 import { X } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -31,6 +33,21 @@ const search = () => {
     filters
   );
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+
+  const {
+    data: companyData,
+    loading: companyLoading,
+    error: companyError,
+    refetch: refetchCompany,
+  } = useFetch(
+    () => fetchCompany({ id: Number(filters?.with_companies) }),
+    false
+  );
+  useEffect(() => {
+    if (filters?.with_companies && !companyData) {
+      refetchCompany();
+    }
+  }, [filters?.with_companies]); // Number() kullanmadan, sadece ilgili state'leri ekle
 
   return (
     <View className="flex-1 bg-dark-200">
@@ -129,7 +146,7 @@ const search = () => {
                   <Text className="text-xl text-white mt-3">
                     Showing
                     <Text className="text-accent font-bold">
-                      {" " + filters.with_companies + " Company"}
+                      {" " + companyData?.name + " Company"}
                     </Text>
                   </Text>
                   <TouchableOpacity
