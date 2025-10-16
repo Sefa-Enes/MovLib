@@ -90,6 +90,7 @@ export default function Index() {
         <SearchBox
           onPress={() => router.push("/search")}
           placeholder="Search a movie or series"
+          onChangeText={function (text: string): void {}}
         />
         <View className="mb-20">
           <View className="flex-1 mt-5">
