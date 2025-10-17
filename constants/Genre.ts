@@ -66,3 +66,12 @@ export const TvGenreId: Record<number, string> = {
 export const getTvGenreName = (id: number): string => {
   return TvGenreId[id] || "Unknown";
 };
+
+export const getTvGenresAsString = (ids?: number[]): string => {
+  if (!ids || ids.length === 0) return "Unknown";
+
+  return ids
+    .map((id) => TvGenreId[id])
+    .filter((name): name is string => !!name) // undefined olanları at
+    .join(", ");
+};
