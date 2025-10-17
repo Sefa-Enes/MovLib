@@ -1,4 +1,5 @@
 import { useMediaContext } from "@/context/GlobalContext";
+import { insertMovieWithGenres } from "@/helpers/databaseHelper";
 import { MediaItem } from "@/interface/interfaces";
 import { Href, router } from "expo-router";
 import { Plus, Star } from "lucide-react-native";
@@ -56,11 +57,11 @@ const ContentCard = ({
           <View className="flex-row justify-between mt-1 mb-1">
             <Text
               numberOfLines={1}
-              className="text-white text-xs font-semibold"
+              className="text-white text-xs font-semibold flex-1 overflow-hidden"
             >
               {title || name}
             </Text>
-            <Text className="text-white text-xs font-semibold">
+            <Text className="text-white text-xs font-semibold ml-2">
               {release_date?.split("-")[0] || first_air_date?.split("-")[0]}
             </Text>
           </View>
@@ -73,7 +74,7 @@ const ContentCard = ({
               </Text>
             </View>
             <TouchableOpacity
-              // onPress={} //, implement all library
+              onPress={() => insertMovieWithGenres(item, false)} //, implement all library
               className="flex-row items-center justify-start gap-x-1 bg-secondary rounded-lg"
             >
               <Plus className="text-accent" />

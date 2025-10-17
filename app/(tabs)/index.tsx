@@ -1,7 +1,9 @@
 import { colors } from "@/components/colors";
 import SearchBox from "@/components/SearchBox";
 import SideScrollList from "@/components/SideScrollList";
+import { getAllMoviesWithGenres } from "@/helpers/databaseHelper";
 import { useChoseFetch } from "@/hooks/useChoseFetch";
+import useFetch from "@/hooks/useFetch";
 import { useRouter } from "expo-router";
 import { Text } from "react-native";
 
@@ -46,6 +48,14 @@ export default function Index() {
     with_genres: 16,
     sort_by: "popularity.desc",
   });
+
+  const {
+    data: WlData,
+    loading: WlLoading,
+    error: WlError,
+    refetch: refetchWl,
+  } = useFetch(() => getAllMoviesWithGenres(false));
+
   // const {
   //   data: scifiMovieData,
   //   loading: scifiMovieLoading,
@@ -159,6 +169,17 @@ export default function Index() {
               data={animationMovieData}
               loading={animationMovieLoading}
               error={animationMovieError}
+            />
+          </View>
+          <View className="flex-1 mt-5">
+            <Text className="text-lg text-accent font-bold mt-5">
+              Watchlist
+            </Text>
+            <SideScrollList
+              contentType="movie"
+              data={WlData}
+              loading={WlLoading}
+              error={WlError}
             />
           </View>
         </View>
