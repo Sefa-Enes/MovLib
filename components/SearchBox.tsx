@@ -9,26 +9,33 @@ interface Props {
   onChangeText: (text: string) => void;
 }
 
-const SearchBox = ({ onPress, placeholder, value, onChangeText }: Props) => {
+const SearchBox = ({
+  onPress,
+  placeholder,
+  value,
+  onChangeText,
+  className,
+}: Props & { className?: string }) => {
   return (
-    <View className="flex-row items-center bg-dark-100 rounded-full px-5 py-4 w-[90%]">
-      <Search className="size-4 text-gray-400 mr-2" />
+    <View
+      className={`flex-row items-center bg-dark-100 rounded-full px-4 py-2  ${className}`}
+    >
+      <Search className="text-gray-400 mr-2" size={18} />
       <TextInput
-        onPress={onPress}
         placeholder={placeholder}
         value={value}
         onChangeText={onChangeText}
-        placeholderTextColor="gray-400"
-        className="flex-1 text-white ml-2"
+        placeholderTextColor="gray"
+        className="flex-1 text-white"
       />
-      {value && (
+      {value ? (
         <TouchableOpacity
           onPress={() => onChangeText("")}
-          className="flex-row items-center justify-center gap-x-2 h-8 w-8 rounded-full"
+          className="w-7 h-7 rounded-full bg-gray-700 items-center justify-center"
         >
-          <X className="text-accent font-bold" size={24} />
+          <X className="text-accent" size={16} />
         </TouchableOpacity>
-      )}
+      ) : null}
     </View>
   );
 };

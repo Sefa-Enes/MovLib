@@ -1,14 +1,18 @@
 import { useMediaContext } from "@/context/GlobalContext";
 import {
+  deleteMovie,
+  deleteTvShow,
   getMovieById,
   getTvShowById,
   insertMovieWithGenres,
+  insertTvWithGenres,
   toggleMovieWatched,
+  toggleTvWatched,
 } from "@/helpers/databaseHelper";
 import { MediaItem } from "@/interface/interfaces";
 import { Href, router } from "expo-router";
 import { Check, Eye, Plus, Star } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
 type CardProps = MediaItem & {
@@ -40,11 +44,11 @@ const ContentCard = ({
   const { setMediaObject } = useMediaContext();
   const pathHead = contentType === "tv" ? "tv" : "movies";
 
-  // 🔹 local state for DB data
   const [fromDb, setFromDb] = useState<UnitedWithDb | null>(null);
-  const [inWatchlist, setInWatchlist] = useState<boolean>(false);
-  const [isWatched, setIsWatched] = useState<boolean>(false);
+  const [inWatchlist, setInWatchlist] = useState(false);
+  const [isWatched, setIsWatched] = useState(false);
 
+  // 🔹 DB'den mevcut durumu al
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -53,41 +57,70 @@ const ContentCard = ({
             ? await getMovieById(id)
             : await getTvShowById(id);
         setFromDb(data as UnitedWithDb);
+        setInWatchlist(!!data);
+        setIsWatched(!!data?.isWatched);
       } catch (err) {
         console.error("DB fetch error:", err);
       }
     };
 
     fetchData();
-  }, [id, contentType]); // id veya contentType değişirse yeniden yükle
+  }, [id, contentType]);
 
-  useEffect(() => {
-    setInWatchlist(fromDb ? true : false);
-    setIsWatched(fromDb?.isWatched ? true : false);
-  }, [fromDb, inWatchlist, isWatched]); // id veya contentType değişirse yeniden yükle
+  const dbFns = useMemo(() => {
+    return contentType === "movie"
+      ? {
+          insert: insertMovieWithGenres,
+          remove: deleteMovie,
+          toggleWatched: toggleMovieWatched,
+        }
+      : {
+          insert: insertTvWithGenres,
+          remove: deleteTvShow,
+          toggleWatched: toggleTvWatched,
+        };
+  }, [contentType]);
 
-  const handleRedirect = async () => {
-    await new Promise((resolve) => {
-      setMediaObject(item);
-      resolve(true);
-    });
-    router.push(`/${pathHead}/${id}` as Href);
-  };
+  // 🔹 İzleme listesine ekle / kaldır
   const handleWatchlistPress = async () => {
-    () => insertMovieWithGenres(item, false);
-  };
-  const handleWatchedPress = async () => {
-    if (!isWatched) {
-      if (inWatchlist) {
-        toggleMovieWatched(id, true);
+    try {
+      if (!inWatchlist) {
+        await dbFns.insert(item, false);
+        setInWatchlist(true);
       } else {
-        insertMovieWithGenres(item, true);
+        // Eğer zaten varsa -> veritabanından silmek istersin
+        await dbFns.remove(id);
+        setInWatchlist(false);
+        setIsWatched(false);
       }
-    } else {
-      toggleMovieWatched(id, false);
+    } catch (err) {
+      console.error("Watchlist toggle error:", err);
     }
   };
 
+  // 🔹 İzlenme durumunu değiştir
+  const handleWatchedPress = async () => {
+    try {
+      if (!isWatched) {
+        if (inWatchlist) {
+          await dbFns.toggleWatched(id, true);
+        } else {
+          await dbFns.insert(item, true);
+          setInWatchlist(true);
+        }
+        setIsWatched(true);
+      } else {
+        await dbFns.toggleWatched(id, false);
+        setIsWatched(false);
+      }
+    } catch (err) {
+      console.error("Watched toggle error:", err);
+    }
+  };
+  const handleRedirect = async () => {
+    setMediaObject(item);
+    router.push(`/${pathHead}/${id}` as Href);
+  };
   return (
     <TouchableOpacity
       onPress={handleRedirect}
@@ -105,17 +138,18 @@ const ContentCard = ({
           className={`w-full rounded-lg ${!isGrid ? "h-60" : "h-52"}`}
         />
 
-        {/* 🔹 Sağ üst - izleme butonu */}
-        <View className="absolute top-2 right-2 rounded-lg flex-row items-center">
+        <View className="absolute top-2 right-2 bg- rounded-lg flex-row items-center">
           <TouchableOpacity
             onPress={handleWatchedPress}
-            className="bg-secondary rounded-lg p-1"
+            className={`rounded-lg p-1 ${
+              !isWatched ? "bg-secondary" : "bg-primary"
+            }`}
           >
-            <Eye color={isWatched ? "white" : "gray"} />
+            <Eye size={18} color={isWatched ? "white" : "darkgray"} />
           </TouchableOpacity>
         </View>
 
-        {/* 🔹 Grid görünüm için alt overlayler */}
+        {/* 🔹 Grid görünüm alt overlay */}
         {isGrid && (
           <>
             <View className="absolute bottom-2 right-2 rounded-lg flex-row items-center">
@@ -126,7 +160,7 @@ const ContentCard = ({
                 }`}
               >
                 {inWatchlist ? (
-                  <Check size={18} color="white" /> // DB’de varsa yeşil göz
+                  <Check size={18} color="white" />
                 ) : (
                   <Plus size={18} className="text-accent" />
                 )}
@@ -173,7 +207,7 @@ const ContentCard = ({
               }`}
             >
               {inWatchlist ? (
-                <Check size={18} color="white" /> // DB’de varsa yeşil göz
+                <Check size={18} color="white" />
               ) : (
                 <Plus size={18} className="text-accent" />
               )}

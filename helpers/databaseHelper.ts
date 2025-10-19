@@ -249,37 +249,31 @@ export const deleteTvShow = async (id: number) => {
 
 export const getMovieById = async (id: number) => {
   try {
-    const movie = await db.getFirstAsync<{
+    const dbMovie = await db.getFirstAsync<{
       id: number;
       title: string;
       poster_path: string | null;
       release_date: string | null;
       vote_average: number;
       isWatched: number;
-      genre_ids: string | null;
-      genre_names: string | null;
     }>(
       `
       SELECT 
-        m.*,
-        GROUP_CONCAT(mg.genre_id) as genre_ids,
-        GROUP_CONCAT(g.name) as genre_names
+        m.*
+        
       FROM MovieWL m
-      LEFT JOIN MovieGenre mg ON m.id = mg.movie_id
-      LEFT JOIN GenresMovie g ON mg.genre_id = g.id
+
       WHERE m.id = ?
       GROUP BY m.id
     `,
       [id]
     );
 
-    if (!movie) return null;
+    if (!dbMovie) return null;
 
     return {
-      ...movie,
-      isWatched: movie.isWatched === 1,
-      genre_ids: movie.genre_ids ? movie.genre_ids.split(",").map(Number) : [],
-      genre_names: movie.genre_names ? movie.genre_names.split(",") : [],
+      ...dbMovie,
+      isWatched: dbMovie.isWatched === 1,
     };
   } catch (error) {
     console.error("❌ Get movie by id error:", error);
@@ -296,17 +290,13 @@ export const getTvShowById = async (id: number) => {
       first_air_date: string | null;
       vote_average: number;
       isWatched: number;
-      genre_ids: string | null;
-      genre_names: string | null;
     }>(
       `
       SELECT 
-        t.*,
-        GROUP_CONCAT(tg.genre_id) as genre_ids,
-        GROUP_CONCAT(g.name) as genre_names
+        t.*
+       
       FROM TvWL t
-      LEFT JOIN TvGenre tg ON t.id = tg.tv_id
-      LEFT JOIN GenresTv g ON tg.genre_id = g.id
+     
       WHERE t.id = ?
       GROUP BY t.id
     `,
@@ -318,10 +308,6 @@ export const getTvShowById = async (id: number) => {
     return {
       ...tvShow,
       isWatched: tvShow.isWatched === 1,
-      genre_ids: tvShow.genre_ids
-        ? tvShow.genre_ids.split(",").map(Number)
-        : [],
-      genre_names: tvShow.genre_names ? tvShow.genre_names.split(",") : [],
     };
   } catch (error) {
     console.error("❌ Get TV show by id error:", error);

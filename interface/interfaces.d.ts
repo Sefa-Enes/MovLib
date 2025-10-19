@@ -118,3 +118,7 @@ export interface Company {
   origin_country?: string;
   parent_company?: string;
 }
+
+interface UnitedWithDb extends MediaItem {
+  isWatched: boolean;
+}

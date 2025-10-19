@@ -4,8 +4,10 @@ import SideScrollList from "@/components/SideScrollList";
 import { getAllMoviesWithGenres } from "@/helpers/databaseHelper";
 import { useChoseFetch } from "@/hooks/useChoseFetch";
 import useFetch from "@/hooks/useFetch";
+import { DiscoverMovieFilters } from "@/utils/queryBuilder";
 import { useRouter } from "expo-router";
-import { Text } from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import { RefreshControl, Text } from "react-native";
 
 import { Image, ScrollView, View } from "react-native";
 export default function Index() {
@@ -16,38 +18,70 @@ export default function Index() {
     loading: movieLoading,
     error: movieError,
   } = useChoseFetch("movie");
+
+  const fantasyFilters = useMemo(
+    () => ({
+      with_genres: 14,
+      sort_by: "popularity.desc",
+    }),
+    []
+  );
+
   const {
     data: fantasyMovieData,
     loading: fantasyMovieLoading,
     error: fantasyMovieError,
-  } = useChoseFetch("movie", undefined, {
-    with_genres: 14,
-    sort_by: "popularity.desc",
-  });
+  } = useChoseFetch("movie", undefined, fantasyFilters as DiscoverMovieFilters);
+
+  const horrorFilters = useMemo(
+    () => ({
+      with_genres: 27,
+      sort_by: "popularity.desc",
+    }),
+    []
+  );
   const {
     data: horrorMovieData,
     loading: horrorMovieLoading,
     error: horrorMovieError,
-  } = useChoseFetch("movie", undefined, {
-    with_genres: 27,
-    sort_by: "popularity.desc",
-  });
+  } = useChoseFetch("movie", undefined, horrorFilters as DiscoverMovieFilters);
+
+  const scifiFilters = useMemo(
+    () => ({
+      with_genres: 878,
+      sort_by: "popularity.desc",
+    }),
+    []
+  );
   const {
     data: scifiMovieData,
     loading: scifiMovieLoading,
     error: scifiMovieError,
-  } = useChoseFetch("movie", undefined, {
-    with_genres: 878,
-    sort_by: "popularity.desc",
-  });
+  } = useChoseFetch("movie", undefined, scifiFilters as DiscoverMovieFilters);
+
+  const animationFilters = useMemo(
+    () => ({
+      with_genres: 16,
+      sort_by: "popularity.desc",
+    }),
+    []
+  );
+
   const {
     data: animationMovieData,
     loading: animationMovieLoading,
     error: animationMovieError,
-  } = useChoseFetch("movie", undefined, {
-    with_genres: 16,
-    sort_by: "popularity.desc",
-  });
+  } = useChoseFetch(
+    "movie",
+    undefined,
+    useMemo(
+      () => ({
+        with_genres: 16,
+        sort_by: "popularity.desc",
+      }),
+      []
+    )
+  );
 
   const {
     data: WlData,
@@ -77,6 +111,17 @@ export default function Index() {
     loading: tvLoading,
     error: tvError,
   } = useChoseFetch("tv");
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const onRefresh = useCallback(async () => {
+    console.log("onrefresh");
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshKey((k) => k + 1);
+      setRefreshing(false);
+    }, 500);
+  }, []);
 
   return (
     <View className="flex-1 bg-dark-200 ">
@@ -87,8 +132,17 @@ export default function Index() {
       />
       <ScrollView
         className="flex-1 px-5 w-full"
+        key={refreshKey}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ minHeight: "100%", paddingBottom: 10 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.accent} // iOS spinner rengi
+            colors={[colors.accent]} // Android spinner rengi
+          />
+        }
       >
         <Image
           source={require("@/assets/images/logo.png")}

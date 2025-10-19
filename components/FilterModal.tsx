@@ -12,30 +12,28 @@ export const FilterModal = ({ filters, setFilters, onPress }: Props) => {
   const [modalOpen, setModalOpen] = useState<boolean>(false);
 
   return (
-    <>
-      <View className="w-12 h-12">
-        <TouchableOpacity
-          onPress={() => setModalOpen(true)}
-          className="w-12 h-12 ml-1 rounded-full items-center justify-center  bg-primary"
-        >
-          <Filter className="size-4 text-gray-400" />
-        </TouchableOpacity>
+    <View className="w-16 h-16">
+      <TouchableOpacity
+        onPress={() => setModalOpen(true)}
+        className="w-16 h-16 rounded-full bg-primary items-center justify-center"
+      >
+        <Filter size={20} className="text-gray-400" />
+      </TouchableOpacity>
 
-        <Modal
-          visible={modalOpen}
-          animationType="slide"
-          onRequestClose={() => setModalOpen(false)}
-        >
-          <View className="flex-1 bg-dark-100">
-            <TouchableOpacity
-              onPress={() => setModalOpen(false)}
-              className="self-end p-4"
-            >
-              <X className="text-white" size={24} />
-            </TouchableOpacity>
-          </View>
-        </Modal>
-      </View>
-    </>
+      <Modal
+        visible={modalOpen}
+        animationType="slide"
+        onRequestClose={() => setModalOpen(false)}
+      >
+        <View className="flex-1 bg-dark-100">
+          <TouchableOpacity
+            onPress={() => setModalOpen(false)}
+            className="self-end p-4"
+          >
+            <X className="text-white" size={24} />
+          </TouchableOpacity>
+        </View>
+      </Modal>
+    </View>
   );
 };

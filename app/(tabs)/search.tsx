@@ -70,12 +70,16 @@ const search = () => {
         />
         {
           <View className="flex-1 mt-5">
-            <View className="flex-row w-full">
+            <View className="flex-row w-full items-center gap-2">
+              {/* 🔹 Search Box */}
               <SearchBox
                 placeholder="Search a movie or series"
                 value={searchQuery}
                 onChangeText={(text: string) => setSearchQuery(text)}
+                className="flex-1" // genişliği kalan alana yay
               />
+
+              {/* 🔹 Filter Button */}
               <FilterModal setFilters={setFilters} />
             </View>
 

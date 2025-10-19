@@ -1,10 +1,27 @@
+import {
+  deleteMovie,
+  deleteTvShow,
+  getMovieById,
+  getTvShowById,
+  insertMovieWithGenres,
+  insertTvWithGenres,
+  toggleMovieWatched,
+  toggleTvWatched,
+} from "@/helpers/databaseHelper";
 import useFetch from "@/hooks/useFetch";
-import { MediaItem } from "@/interface/interfaces";
+import { MediaItem, UnitedWithDb } from "@/interface/interfaces";
 import { fetchSimilar } from "@/services/api";
 import { DiscoverMovieFilters } from "@/utils/queryBuilder";
 import { router } from "expo-router";
-import { ChevronDown, ChevronUp, X } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  Plus,
+  X,
+} from "lucide-react-native";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Image,
   Modal,
@@ -49,6 +66,85 @@ const DetailsPage = ({
   const [detailDrawer, setDetailDrawer] = useState<boolean>(false);
   const [posterModalOpen, setPosterModalOpen] = useState(false);
 
+  const [fromDb, setFromDb] = useState<UnitedWithDb | null>(null);
+  const [inWatchlist, setInWatchlist] = useState(false);
+  const [isWatched, setIsWatched] = useState(false);
+
+  // 🔹 DB'den mevcut durumu al
+  useEffect(() => {
+    if (mediaObject) {
+      const fetchData = async () => {
+        try {
+          const data =
+            contentType === "movie"
+              ? await getMovieById(mediaObject.id)
+              : await getTvShowById(mediaObject.id);
+          setFromDb(data as UnitedWithDb);
+          setInWatchlist(!!data);
+          setIsWatched(!!data?.isWatched);
+        } catch (err) {
+          console.error("DB fetch error:", err);
+        }
+      };
+
+      fetchData();
+    }
+  }, [mediaObject, contentType]);
+
+  const dbFns = useMemo(() => {
+    return contentType === "movie"
+      ? {
+          insert: insertMovieWithGenres,
+          remove: deleteMovie,
+          toggleWatched: toggleMovieWatched,
+        }
+      : {
+          insert: insertTvWithGenres,
+          remove: deleteTvShow,
+          toggleWatched: toggleTvWatched,
+        };
+  }, [contentType]);
+
+  // 🔹 İzleme listesine ekle / kaldır
+  const handleWatchlistPress = async () => {
+    try {
+      if (mediaObject) {
+        if (!inWatchlist) {
+          await dbFns.insert(mediaObject, false);
+          setInWatchlist(true);
+        } else {
+          // Eğer zaten varsa -> veritabanından silmek istersin
+          await dbFns.remove(mediaObject?.id);
+          setInWatchlist(false);
+          setIsWatched(false);
+        }
+      }
+    } catch (err) {
+      console.error("Watchlist toggle error:", err);
+    }
+  };
+
+  // 🔹 İzlenme durumunu değiştir
+  const handleWatchedPress = async () => {
+    try {
+      if (mediaObject) {
+        if (!isWatched) {
+          if (inWatchlist) {
+            await dbFns.toggleWatched(mediaObject.id, true);
+          } else {
+            await dbFns.insert(mediaObject, true);
+            setInWatchlist(true);
+          }
+          setIsWatched(true);
+        } else {
+          await dbFns.toggleWatched(mediaObject.id, false);
+          setIsWatched(false);
+        }
+      }
+    } catch (err) {
+      console.error("Watched toggle error:", err);
+    }
+  };
   useEffect(() => {
     if (mediaObject) {
       refetch();
@@ -122,7 +218,7 @@ const DetailsPage = ({
               </TouchableOpacity>
             </View>
           </Modal>
-          <View className="flex-1 flex-col space-y-2">
+          <View className="flex-1 flex-col gap-2">
             {/* Yayın Tarihi */}
             {mediaObject?.release_date && (
               <Text className="text-gray-300" numberOfLines={2}>
@@ -185,6 +281,37 @@ const DetailsPage = ({
               <Text className="text-gray-300  " numberOfLines={1}>
                 🔞 Adult Content
               </Text>
+            )}
+
+            {mediaObject && (
+              <>
+                <View className="w-full">
+                  <TouchableOpacity
+                    onPress={handleWatchedPress}
+                    className={`flex-row gap-2 justify-center rounded-lg p-1 ${
+                      !isWatched ? "bg-secondary" : "bg-primary"
+                    }`}
+                  >
+                    <Eye size={18} color={isWatched ? "white" : "darkgray"} />
+                    <Text>{isWatched ? "Watched" : "Not Watched"}</Text>
+                  </TouchableOpacity>
+                </View>
+                <View className="w-full ">
+                  <TouchableOpacity
+                    onPress={handleWatchedPress}
+                    className={`flex flex-row gap-2 justify-center rounded-lg p-1 ${
+                      !inWatchlist ? "bg-secondary" : "bg-primary"
+                    }`}
+                  >
+                    {inWatchlist ? (
+                      <Check size={18} color="white" />
+                    ) : (
+                      <Plus size={18} className="text-accent" />
+                    )}
+                    <Text>{inWatchlist ? "Added To List" : "Not Added"}</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
             )}
           </View>
         </View>
