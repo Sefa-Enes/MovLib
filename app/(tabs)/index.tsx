@@ -110,7 +110,7 @@ export default function Index() {
   return (
     <View className="flex-1 bg-dark-200 ">
       <Image
-        source={require("@/assets/images/bg-image.png")}
+        source={require("@/assets/images/bg_image.png")}
         className="absolute w-full z-0 opacity-15"
         resizeMode="cover"
       />
