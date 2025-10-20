@@ -90,22 +90,6 @@ export default function Index() {
     refetch: refetchWl,
   } = useFetch(() => getAllMoviesWithGenres(false));
 
-  // const {
-  //   data: scifiMovieData,
-  //   loading: scifiMovieLoading,
-  //   error: scifiMovieError,
-  // } = useChoseFetch("movie", undefined, {
-  //   with_genres: 878,
-  //   sort_by: "popularity.desc",
-  // });
-  // const {
-  //   data: scifiMovieData,
-  //   loading: scifiMovieLoading,
-  //   error: scifiMovieError,
-  // } = useChoseFetch("movie", undefined, {
-  //   with_genres: 878,
-  //   sort_by: "popularity.desc",
-  // });
   const {
     data: tvData,
     loading: tvLoading,

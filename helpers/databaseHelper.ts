@@ -99,16 +99,12 @@ export const getAllMoviesWithGenres = async (onlyWatched: boolean = false) => {
       release_date: string | null;
       vote_average: number;
       isWatched: number;
-      genre_ids: string | null;
-      genre_names: string | null;
     }>(`
       SELECT 
-        m.*,
-        GROUP_CONCAT(mg.genre_id) as genre_ids,
-        GROUP_CONCAT(g.name) as genre_names
+        m.*
+
       FROM MovieWL m
-      LEFT JOIN MovieGenre mg ON m.id = mg.movie_id
-      LEFT JOIN GenresMovie g ON mg.genre_id = g.id
+
       ${whereClause}
       GROUP BY m.id
     `);
@@ -117,8 +113,6 @@ export const getAllMoviesWithGenres = async (onlyWatched: boolean = false) => {
     return movies.map((movie) => ({
       ...movie,
       isWatched: movie.isWatched === 1,
-      genre_ids: movie.genre_ids ? movie.genre_ids.split(",").map(Number) : [],
-      genre_names: movie.genre_names ? movie.genre_names.split(",") : [],
     }));
   } catch (error) {
     console.error("❌ Get movies with genres error:", error);
@@ -174,16 +168,12 @@ export const getTvShowsWithGenres = async (onlyWatched: boolean = false) => {
       first_air_date: string | null;
       vote_average: number;
       isWatched: number;
-      genre_ids: string | null;
-      genre_names: string | null;
     }>(`
       SELECT 
-        t.*,
-        GROUP_CONCAT(tg.genre_id) as genre_ids,
-        GROUP_CONCAT(g.name) as genre_names
+        t.*
+
       FROM TvWL t
-      LEFT JOIN TvGenre tg ON t.id = tg.tv_id
-      LEFT JOIN GenresTv g ON tg.genre_id = g.id
+
       ${whereClause}
       GROUP BY t.id
     `);
@@ -192,8 +182,6 @@ export const getTvShowsWithGenres = async (onlyWatched: boolean = false) => {
     return tvShows.map((tv) => ({
       ...tv,
       isWatched: tv.isWatched === 1,
-      genre_ids: tv.genre_ids ? tv.genre_ids.split(",").map(Number) : [],
-      genre_names: tv.genre_names ? tv.genre_names.split(",") : [],
     }));
   } catch (error) {
     console.error("❌ Get TV shows with genres error:", error);
