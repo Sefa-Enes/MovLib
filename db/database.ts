@@ -78,16 +78,40 @@
 //   } catch (error) {
 //     console.error("❌ Toggle watched error:", error);
 //   }
-// };
+// };import { MovieGenreId, TvGenreId } from "@/constants/Genre";
 
+import { Platform } from "react-native";
+
+// Type import (doesn't cause runtime errors)
 import { MovieGenreId, TvGenreId } from "@/constants/Genre";
-import * as SQLite from "expo-sqlite";
+import type { SQLiteDatabase } from "expo-sqlite";
 
-export const db = SQLite.openDatabaseSync("mydb.db");
+// SQLite sadece native platformlarda import edilir
+let SQLite: any = null;
+let dbInstance: SQLiteDatabase | null = null;
+
+if (Platform.OS !== "web") {
+  // Dynamic import - only loaded on native platforms
+  SQLite = require("expo-sqlite");
+  dbInstance = SQLite.openDatabaseSync("mydb.db");
+}
+
+export const db = dbInstance;
 
 export const initDB = async () => {
+  if (Platform.OS === "web") {
+    // Web için initialization gerekmez, localStorage otomatik hazır
+    console.log("✅ Web storage ready");
+    return;
+  }
+
+  // Native platformlar için SQLite
+  if (!dbInstance) {
+    throw new Error("Database instance not available");
+  }
+
   try {
-    await db.execAsync(`
+    await dbInstance.execAsync(`
       CREATE TABLE IF NOT EXISTS MovieWL (
         id INTEGER PRIMARY KEY,
         title TEXT NOT NULL,
@@ -141,11 +165,14 @@ export const initDB = async () => {
     console.error("❌ Error creating tables:", error);
   }
 };
+
 const seedGenres = async () => {
+  if (Platform.OS === "web" || !dbInstance) return;
+
   try {
     // Movie genres
     for (const [id, name] of Object.entries(MovieGenreId)) {
-      await db.runAsync(
+      await dbInstance.runAsync(
         `INSERT OR IGNORE INTO GenresMovie (id, name) VALUES (?, ?)`,
         [Number(id), name]
       );
@@ -153,7 +180,7 @@ const seedGenres = async () => {
 
     // TV genres
     for (const [id, name] of Object.entries(TvGenreId)) {
-      await db.runAsync(
+      await dbInstance.runAsync(
         `INSERT OR IGNORE INTO GenresTv (id, name) VALUES (?, ?)`,
         [Number(id), name]
       );
