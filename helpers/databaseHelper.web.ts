@@ -1,6 +1,6 @@
 import { Movie, Tv } from "@/interface/interfaces";
 
-// Web storage helpers
+// Web storage helperss
 const getWebStorage = () => {
   if (typeof window === "undefined" || !window.localStorage) {
     throw new Error("localStorage not available");
