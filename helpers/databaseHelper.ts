@@ -1,12 +1,12 @@
 import { db } from "@/db/database";
-import { Movie, Tv } from "@/interface/interfaces";
+import { Movie, Tv, TvEpisode, WatchedTvEpisode } from "@/interface/interfaces";
 import { Platform } from "react-native";
 
 // Helper to get non-null db for native platforms
 const getDB = () => {
   if (!db) {
     throw new Error(
-      "Database not initialized - this should only be called on native platforms"
+      "Database not initialized - this should only be called on native platforms",
     );
   }
   return db;
@@ -37,12 +37,20 @@ const getWebTvShows = async (): Promise<any[]> => {
 const setWebTvShows = async (tvShows: any[]): Promise<void> => {
   getWebStorage().setItem("tv_watchlist", JSON.stringify(tvShows));
 };
+const getWebEpisodes = async (): Promise<any[]> => {
+  const data = getWebStorage().getItem("tv_episodes");
 
+  return data ? JSON.parse(data) : [];
+};
+
+const setWebEpisodes = async (episodes: any[]): Promise<void> => {
+  getWebStorage().setItem("tv_episodes", JSON.stringify(episodes));
+};
 // ============= EXISTING FUNCTIONS - NOW PLATFORM AGNOSTIC =============
 
 export const insertMovieWithGenres = async (
   movie: Movie,
-  isWatched: boolean = false
+  isWatched: boolean = false,
 ) => {
   if (Platform.OS === "web") {
     const movies = await getWebMovies();
@@ -83,7 +91,7 @@ export const insertMovieWithGenres = async (
             movie.release_date || null,
             movie.vote_average || 0,
             isWatched ? 1 : 0,
-          ]
+          ],
         );
 
         await database.runAsync(`DELETE FROM MovieGenre WHERE movie_id = ?`, [
@@ -94,7 +102,7 @@ export const insertMovieWithGenres = async (
           for (const genreId of movie.genre_ids) {
             await database.runAsync(
               `INSERT INTO MovieGenre (movie_id, genre_id) VALUES (?, ?)`,
-              [movie.id, genreId]
+              [movie.id, genreId],
             );
           }
         }
@@ -110,7 +118,7 @@ export const insertMovieWithGenres = async (
 
 export const insertTvWithGenres = async (
   tv: Tv,
-  isWatched: boolean = false
+  isWatched: boolean = false,
 ) => {
   if (Platform.OS === "web") {
     const tvShows = await getWebTvShows();
@@ -150,7 +158,7 @@ export const insertTvWithGenres = async (
             tv.first_air_date || null,
             tv.vote_average || 0,
             isWatched ? 1 : 0,
-          ]
+          ],
         );
 
         await database.runAsync(`DELETE FROM TvGenre WHERE tv_id = ?`, [tv.id]);
@@ -159,7 +167,7 @@ export const insertTvWithGenres = async (
           for (const genreId of tv.genre_ids) {
             await database.runAsync(
               `INSERT INTO TvGenre (tv_id, genre_id) VALUES (?, ?)`,
-              [tv.id, genreId]
+              [tv.id, genreId],
             );
           }
         }
@@ -415,7 +423,7 @@ export const getMovieById = async (id: number) => {
         WHERE m.id = ?
         GROUP BY m.id
       `,
-        [id]
+        [id],
       );
 
       if (!dbMovie) return null;
@@ -454,7 +462,7 @@ export const getTvShowById = async (id: number) => {
         WHERE t.id = ?
         GROUP BY t.id
       `,
-        [id]
+        [id],
       );
 
       if (!tvShow) return null;
@@ -468,4 +476,315 @@ export const getTvShowById = async (id: number) => {
       return null;
     }
   }
+};
+export const upsertTvEpisodes = async (
+  tvId: number,
+  episodes: TvEpisode[],
+): Promise<void> => {
+  if (Platform.OS === "web") {
+    const storedEpisodes = await getWebEpisodes();
+
+    for (const episode of episodes) {
+      const existingIndex = storedEpisodes.findIndex(
+        (item) =>
+          item.tv_id === tvId &&
+          item.season_number === episode.season_number &&
+          item.episode_number === episode.episode_number,
+      );
+
+      const existingEpisode =
+        existingIndex >= 0 ? storedEpisodes[existingIndex] : undefined;
+
+      const episodeData = {
+        tv_id: tvId,
+        season_number: episode.season_number,
+        episode_number: episode.episode_number,
+        name: episode.name,
+        overview: episode.overview || "",
+        air_date: episode.air_date || null,
+        still_path: episode.still_path || null,
+        tmdb_episode_id: episode.id,
+
+        // Kullanıcı verilerini koruyoruz
+        isWatched: existingEpisode?.isWatched ?? false,
+        watched_at: existingEpisode?.watched_at ?? null,
+        rewatch_count: existingEpisode?.rewatch_count ?? 0,
+      };
+
+      if (existingIndex >= 0) {
+        storedEpisodes[existingIndex] = episodeData;
+      } else {
+        storedEpisodes.push(episodeData);
+      }
+    }
+
+    await setWebEpisodes(storedEpisodes);
+    return;
+  }
+
+  const database = getDB();
+
+  await database.withTransactionAsync(async () => {
+    for (const episode of episodes) {
+      await database.runAsync(
+        `
+        INSERT INTO TvEpisodes (
+          tv_id,
+          season_number,
+          episode_number,
+          name,
+          overview,
+          air_date,
+          still_path,
+          tmdb_episode_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (
+          tv_id,
+          season_number,
+          episode_number
+        )
+        DO UPDATE SET
+          name = excluded.name,
+          overview = excluded.overview,
+          air_date = excluded.air_date,
+          still_path = excluded.still_path,
+          tmdb_episode_id = excluded.tmdb_episode_id
+        `,
+        [
+          tvId,
+          episode.season_number,
+          episode.episode_number,
+          episode.name,
+          episode.overview || null,
+          episode.air_date || null,
+          episode.still_path || null,
+          episode.id,
+        ],
+      );
+    }
+  });
+};
+export const getEpisodesBySeason = async (
+  tvId: number,
+  seasonNumber: number,
+): Promise<WatchedTvEpisode[]> => {
+  if (Platform.OS === "web") {
+    const storedEpisodes = await getWebEpisodes();
+
+    return storedEpisodes
+      .filter(
+        (episode) =>
+          episode.tv_id === tvId && episode.season_number === seasonNumber,
+      )
+      .sort((a, b) => a.episode_number - b.episode_number)
+      .map((episode) => ({
+        ...episode,
+        id: episode.tmdb_episode_id,
+        tmdb_episode_id: episode.tmdb_episode_id,
+        episode_type: "standard",
+        runtime: null,
+        vote_average: 0,
+        vote_count: 0,
+        isWatched: Boolean(episode.isWatched),
+      }));
+  }
+
+  const database = getDB();
+
+  const episodes = await database.getAllAsync<{
+    id: number;
+    tv_id: number;
+    season_number: number;
+    episode_number: number;
+    name: string;
+    overview: string | null;
+    air_date: string | null;
+    still_path: string | null;
+    tmdb_episode_id: number | null;
+    isWatched: number;
+    watched_at: string | null;
+    rewatch_count: number;
+  }>(
+    `
+    SELECT *
+    FROM TvEpisodes
+    WHERE tv_id = ?
+      AND season_number = ?
+    ORDER BY episode_number ASC
+    `,
+    [tvId, seasonNumber],
+  );
+
+  return episodes.map((episode) => ({
+    id: episode.tmdb_episode_id ?? episode.id,
+    tmdb_episode_id: episode.tmdb_episode_id ?? episode.id,
+    tv_id: episode.tv_id,
+    season_number: episode.season_number,
+    episode_number: episode.episode_number,
+    name: episode.name,
+    overview: episode.overview ?? "",
+    air_date: episode.air_date,
+    still_path: episode.still_path,
+    episode_type: "standard",
+    runtime: null,
+    vote_average: 0,
+    vote_count: 0,
+    isWatched: episode.isWatched === 1,
+    watched_at: episode.watched_at,
+    rewatch_count: episode.rewatch_count,
+  }));
+};
+export const toggleEpisodeWatched = async ({
+  tvId,
+  seasonNumber,
+  episodeNumber,
+  watched,
+}: {
+  tvId: number;
+  seasonNumber: number;
+  episodeNumber: number;
+  watched: boolean;
+}): Promise<void> => {
+  const watchedAt = watched ? new Date().toISOString() : null;
+
+  if (Platform.OS === "web") {
+    const storedEpisodes = await getWebEpisodes();
+
+    const episode = storedEpisodes.find(
+      (item) =>
+        item.tv_id === tvId &&
+        item.season_number === seasonNumber &&
+        item.episode_number === episodeNumber,
+    );
+
+    if (episode) {
+      episode.isWatched = watched;
+      episode.watched_at = watchedAt;
+
+      await setWebEpisodes(storedEpisodes);
+    }
+
+    return;
+  }
+
+  const database = getDB();
+
+  await database.runAsync(
+    `
+    UPDATE TvEpisodes
+    SET
+      isWatched = ?,
+      watched_at = ?
+    WHERE tv_id = ?
+      AND season_number = ?
+      AND episode_number = ?
+    `,
+    [watched ? 1 : 0, watchedAt, tvId, seasonNumber, episodeNumber],
+  );
+};
+export const markSeasonWatched = async ({
+  tvId,
+  seasonNumber,
+  watched,
+}: {
+  tvId: number;
+  seasonNumber: number;
+  watched: boolean;
+}): Promise<void> => {
+  const watchedAt = watched ? new Date().toISOString() : null;
+
+  if (Platform.OS === "web") {
+    const storedEpisodes = await getWebEpisodes();
+
+    storedEpisodes.forEach((episode) => {
+      if (episode.tv_id === tvId && episode.season_number === seasonNumber) {
+        episode.isWatched = watched;
+        episode.watched_at = watchedAt;
+      }
+    });
+
+    await setWebEpisodes(storedEpisodes);
+    return;
+  }
+
+  const database = getDB();
+
+  await database.runAsync(
+    `
+    UPDATE TvEpisodes
+    SET
+      isWatched = ?,
+      watched_at = ?
+    WHERE tv_id = ?
+      AND season_number = ?
+    `,
+    [watched ? 1 : 0, watchedAt, tvId, seasonNumber],
+  );
+};
+export const getTvProgress = async (
+  tvId: number,
+): Promise<{
+  totalEpisodes: number;
+  watchedEpisodes: number;
+  percentage: number;
+}> => {
+  if (Platform.OS === "web") {
+    const storedEpisodes = await getWebEpisodes();
+
+    const tvEpisodes = storedEpisodes.filter(
+      (episode) => episode.tv_id === tvId,
+    );
+
+    const totalEpisodes = tvEpisodes.length;
+
+    const watchedEpisodes = tvEpisodes.filter(
+      (episode) => episode.isWatched,
+    ).length;
+
+    return {
+      totalEpisodes,
+      watchedEpisodes,
+      percentage:
+        totalEpisodes === 0
+          ? 0
+          : Math.round((watchedEpisodes / totalEpisodes) * 100),
+    };
+  }
+
+  const database = getDB();
+
+  const result = await database.getFirstAsync<{
+    totalEpisodes: number;
+    watchedEpisodes: number;
+  }>(
+    `
+    SELECT
+      COUNT(*) AS totalEpisodes,
+      COALESCE(
+        SUM(
+          CASE
+            WHEN isWatched = 1 THEN 1
+            ELSE 0
+          END
+        ),
+        0
+      ) AS watchedEpisodes
+    FROM TvEpisodes
+    WHERE tv_id = ?
+    `,
+    [tvId],
+  );
+
+  const totalEpisodes = result?.totalEpisodes ?? 0;
+  const watchedEpisodes = result?.watchedEpisodes ?? 0;
+
+  return {
+    totalEpisodes,
+    watchedEpisodes,
+    percentage:
+      totalEpisodes === 0
+        ? 0
+        : Math.round((watchedEpisodes / totalEpisodes) * 100),
+  };
 };

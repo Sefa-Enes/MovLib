@@ -15,23 +15,23 @@ const TvDetails = () => {
   // autoFetch'i kapattık, kontrol bizde
   const { data, loading, error, refetch } = useFetch(
     () => fetchTvDetails({ id: Number(id) }),
-    false
+    false,
   );
 
   // Sadece veri yoksa fetch et
   useEffect(() => {
-    if (!mediaObject) {
+    if (id) {
       refetch();
     }
-  }, [mediaObject, id]);
+  }, [id]);
 
   useEffect(() => {
-    if (data && !mediaObject) {
+    if (data) {
       setMediaObject(data);
     }
-  }, [data]);
+  }, [data, setMediaObject]);
 
-  if (loading && !mediaObject) {
+  if (loading && !data) {
     return (
       <View className="flex-1 justify-center items-center bg-accent">
         <ActivityIndicator size="large" color="#fff" />
@@ -53,7 +53,7 @@ const TvDetails = () => {
         setMediaObject={setMediaObject}
         contentType={contentType}
         mediaObject={mediaObject || data}
-        detailData={undefined}
+        detailData={data}
         setFilters={setFilters}
         refetchDetails={refetch}
       />

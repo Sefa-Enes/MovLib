@@ -1,4 +1,4 @@
-import { Movie, Tv } from "@/interface/interfaces";
+import { Movie, Tv, TvEpisode, WatchedTvEpisode } from "@/interface/interfaces";
 
 // Web storage helperss
 const getWebStorage = () => {
@@ -25,12 +25,19 @@ const getWebTvShows = async (): Promise<any[]> => {
 const setWebTvShows = async (tvShows: any[]): Promise<void> => {
   getWebStorage().setItem("tv_watchlist", JSON.stringify(tvShows));
 };
+const getWebEpisodes = async (): Promise<any[]> => {
+  const data = getWebStorage().getItem("tv_episodes");
+  return data ? JSON.parse(data) : [];
+};
 
+const setWebEpisodes = async (episodes: any[]): Promise<void> => {
+  getWebStorage().setItem("tv_episodes", JSON.stringify(episodes));
+};
 // ============= WEB IMPLEMENTATIONS =============
 
 export const insertMovieWithGenres = async (
   movie: Movie,
-  isWatched: boolean = false
+  isWatched: boolean = false,
 ) => {
   const movies = await getWebMovies();
   const existingIndex = movies.findIndex((m) => m.id === movie.id);
@@ -57,7 +64,7 @@ export const insertMovieWithGenres = async (
 
 export const insertTvWithGenres = async (
   tv: Tv,
-  isWatched: boolean = false
+  isWatched: boolean = false,
 ) => {
   const tvShows = await getWebTvShows();
   const existingIndex = tvShows.findIndex((t) => t.id === tv.id);
@@ -152,4 +159,139 @@ export const getMovieById = async (id: number) => {
 export const getTvShowById = async (id: number) => {
   const tvShows = await getWebTvShows();
   return tvShows.find((t) => t.id === id) || null;
+};
+export const upsertTvEpisodes = async (
+  tvId: number,
+  episodes: TvEpisode[],
+): Promise<void> => {
+  const storedEpisodes = await getWebEpisodes();
+
+  for (const episode of episodes) {
+    const existingIndex = storedEpisodes.findIndex(
+      (item) =>
+        item.tv_id === tvId &&
+        item.season_number === episode.season_number &&
+        item.episode_number === episode.episode_number,
+    );
+
+    const existing =
+      existingIndex >= 0 ? storedEpisodes[existingIndex] : undefined;
+
+    const episodeData = {
+      tv_id: tvId,
+      season_number: episode.season_number,
+      episode_number: episode.episode_number,
+      name: episode.name,
+      overview: episode.overview || "",
+      air_date: episode.air_date || null,
+      still_path: episode.still_path || null,
+      tmdb_episode_id: episode.id,
+      isWatched: existing?.isWatched ?? false,
+      watched_at: existing?.watched_at ?? null,
+      rewatch_count: existing?.rewatch_count ?? 0,
+    };
+
+    if (existingIndex >= 0) {
+      storedEpisodes[existingIndex] = episodeData;
+    } else {
+      storedEpisodes.push(episodeData);
+    }
+  }
+
+  await setWebEpisodes(storedEpisodes);
+};
+
+export const getEpisodesBySeason = async (
+  tvId: number,
+  seasonNumber: number,
+): Promise<WatchedTvEpisode[]> => {
+  const episodes = await getWebEpisodes();
+
+  return episodes
+    .filter(
+      (episode) =>
+        episode.tv_id === tvId && episode.season_number === seasonNumber,
+    )
+    .sort((a, b) => a.episode_number - b.episode_number)
+    .map((episode) => ({
+      ...episode,
+      id: episode.tmdb_episode_id,
+      episode_type: "standard",
+      runtime: null,
+      vote_average: 0,
+      vote_count: 0,
+      isWatched: Boolean(episode.isWatched),
+    }));
+};
+
+export const toggleEpisodeWatched = async ({
+  tvId,
+  seasonNumber,
+  episodeNumber,
+  watched,
+}: {
+  tvId: number;
+  seasonNumber: number;
+  episodeNumber: number;
+  watched: boolean;
+}): Promise<void> => {
+  const episodes = await getWebEpisodes();
+
+  const episode = episodes.find(
+    (item) =>
+      item.tv_id === tvId &&
+      item.season_number === seasonNumber &&
+      item.episode_number === episodeNumber,
+  );
+
+  if (!episode) {
+    return;
+  }
+
+  episode.isWatched = watched;
+  episode.watched_at = watched ? new Date().toISOString() : null;
+
+  await setWebEpisodes(episodes);
+};
+
+export const markSeasonWatched = async ({
+  tvId,
+  seasonNumber,
+  watched,
+}: {
+  tvId: number;
+  seasonNumber: number;
+  watched: boolean;
+}): Promise<void> => {
+  const episodes = await getWebEpisodes();
+
+  episodes.forEach((episode) => {
+    if (episode.tv_id === tvId && episode.season_number === seasonNumber) {
+      episode.isWatched = watched;
+      episode.watched_at = watched ? new Date().toISOString() : null;
+    }
+  });
+
+  await setWebEpisodes(episodes);
+};
+
+export const getTvProgress = async (tvId: number) => {
+  const episodes = await getWebEpisodes();
+
+  const tvEpisodes = episodes.filter((episode) => episode.tv_id === tvId);
+
+  const totalEpisodes = tvEpisodes.length;
+
+  const watchedEpisodes = tvEpisodes.filter(
+    (episode) => episode.isWatched,
+  ).length;
+
+  return {
+    totalEpisodes,
+    watchedEpisodes,
+    percentage:
+      totalEpisodes === 0
+        ? 0
+        : Math.round((watchedEpisodes / totalEpisodes) * 100),
+  };
 };

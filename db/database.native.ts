@@ -9,6 +9,8 @@ export const db = dbInstance;
 export const initDB = async () => {
   try {
     await dbInstance.execAsync(`
+        PRAGMA foreign_keys = ON;
+
       CREATE TABLE IF NOT EXISTS MovieWL (
         id INTEGER PRIMARY KEY,
         title TEXT NOT NULL,
@@ -52,6 +54,23 @@ export const initDB = async () => {
         FOREIGN KEY (tv_id) REFERENCES TvWL(id) ON DELETE CASCADE,
         FOREIGN KEY (genre_id) REFERENCES GenresTv(id) ON DELETE CASCADE
       );
+      CREATE TABLE IF NOT EXISTS TvEpisodes (
+        id INTEGER PRIMARY KEY,
+        tv_id INTEGER NOT NULL,
+        season_number INTEGER NOT NULL,
+        episode_number INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        overview TEXT,
+        air_date TEXT,
+        still_path TEXT,
+        tmdb_episode_id INTEGER,
+        isWatched INTEGER DEFAULT 0,
+        watched_at TEXT,
+        rewatch_count INTEGER DEFAULT 0,
+
+        UNIQUE (tv_id, season_number, episode_number),
+        FOREIGN KEY (tv_id) REFERENCES TvWL(id) ON DELETE CASCADE
+      );
     `);
 
     console.log("✅ All tables created successfully");
@@ -69,7 +88,7 @@ const seedGenres = async () => {
     for (const [id, name] of Object.entries(MovieGenreId)) {
       await dbInstance.runAsync(
         `INSERT OR IGNORE INTO GenresMovie (id, name) VALUES (?, ?)`,
-        [Number(id), name]
+        [Number(id), name],
       );
     }
 
@@ -77,7 +96,7 @@ const seedGenres = async () => {
     for (const [id, name] of Object.entries(TvGenreId)) {
       await dbInstance.runAsync(
         `INSERT OR IGNORE INTO GenresTv (id, name) VALUES (?, ?)`,
-        [Number(id), name]
+        [Number(id), name],
       );
     }
 

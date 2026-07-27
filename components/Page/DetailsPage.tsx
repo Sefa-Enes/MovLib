@@ -1,16 +1,27 @@
 import {
   deleteMovie,
   deleteTvShow,
+  getEpisodesBySeason,
   getMovieById,
+  getTvProgress,
   getTvShowById,
   insertMovieWithGenres,
   insertTvWithGenres,
+  markSeasonWatched,
+  toggleEpisodeWatched,
   toggleMovieWatched,
   toggleTvWatched,
+  upsertTvEpisodes,
 } from "@/helpers/databaseHelper";
 import useFetch from "@/hooks/useFetch";
-import { MediaItem, UnitedWithDb } from "@/interface/interfaces";
-import { fetchSimilar } from "@/services/api";
+import {
+  MediaItem,
+  Movie,
+  Tv,
+  UnitedWithDb,
+  WatchedTvEpisode,
+} from "@/interface/interfaces";
+import { fetchSimilar, fetchTvSeasonEpisodes } from "@/services/api";
 import { DiscoverMovieFilters } from "@/utils/queryBuilder";
 import { router } from "expo-router";
 import {
@@ -23,6 +34,7 @@ import {
 } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Modal,
   ScrollView,
@@ -61,7 +73,7 @@ const DetailsPage = ({
   } = useFetch(
     () =>
       fetchSimilar({ contentType: contentType, id: Number(mediaObject?.id) }),
-    false
+    false,
   );
   const [detailDrawer, setDetailDrawer] = useState<boolean>(false);
   const [posterModalOpen, setPosterModalOpen] = useState(false);
@@ -70,6 +82,21 @@ const DetailsPage = ({
   const [inWatchlist, setInWatchlist] = useState(false);
   const [isWatched, setIsWatched] = useState(false);
 
+  const [expandedSeason, setExpandedSeason] = useState<number | null>(null);
+
+  const [seasonEpisodes, setSeasonEpisodes] = useState<
+    Record<number, WatchedTvEpisode[]>
+  >({});
+
+  const [loadingSeason, setLoadingSeason] = useState<number | null>(null);
+
+  const [episodeError, setEpisodeError] = useState<string | null>(null);
+
+  const [tvProgress, setTvProgress] = useState({
+    totalEpisodes: 0,
+    watchedEpisodes: 0,
+    percentage: 0,
+  });
   // 🔹 DB'den mevcut durumu al
   useEffect(() => {
     if (mediaObject) {
@@ -92,17 +119,35 @@ const DetailsPage = ({
   }, [mediaObject, contentType]);
 
   const dbFns = useMemo(() => {
-    return contentType === "movie"
-      ? {
-          insert: insertMovieWithGenres,
-          remove: deleteMovie,
-          toggleWatched: toggleMovieWatched,
-        }
-      : {
-          insert: insertTvWithGenres,
-          remove: deleteTvShow,
-          toggleWatched: toggleTvWatched,
-        };
+    if (contentType === "movie") {
+      return {
+        insert: async (item: MediaItem, watched: boolean) => {
+          return insertMovieWithGenres(item as Movie, watched);
+        },
+
+        remove: async (id: number) => {
+          return deleteMovie(id);
+        },
+
+        toggleWatched: async (id: number, watched: boolean) => {
+          return toggleMovieWatched(id, watched);
+        },
+      };
+    }
+
+    return {
+      insert: async (item: MediaItem, watched: boolean) => {
+        return insertTvWithGenres(item as Tv, watched);
+      },
+
+      remove: async (id: number) => {
+        return deleteTvShow(id);
+      },
+
+      toggleWatched: async (id: number, watched: boolean) => {
+        return toggleTvWatched(id, watched);
+      },
+    };
   }, [contentType]);
 
   // 🔹 İzleme listesine ekle / kaldır
@@ -150,7 +195,292 @@ const DetailsPage = ({
       refetch();
     }
   }, [mediaObject]);
+  useEffect(() => {
+    if (contentType !== "tv" || !mediaObject) {
+      return;
+    }
 
+    const loadTvProgress = async () => {
+      try {
+        const progress = await getTvProgress(mediaObject.id);
+        setTvProgress(progress);
+      } catch (error) {
+        console.error("TV progress fetch error:", error);
+      }
+    };
+
+    loadTvProgress();
+  }, [contentType, mediaObject]);
+
+  const loadSeasonEpisodes = async (seasonNumber: number) => {
+    if (!mediaObject || contentType !== "tv") {
+      return;
+    }
+
+    // Daha önce yüklenmişse tekrar API çağrısı yapma
+    if (seasonEpisodes[seasonNumber]) {
+      return;
+    }
+
+    try {
+      setLoadingSeason(seasonNumber);
+      setEpisodeError(null);
+
+      const fetchedEpisodes = await fetchTvSeasonEpisodes({
+        tvId: mediaObject.id,
+        seasonNumber,
+      });
+
+      await upsertTvEpisodes(mediaObject.id, fetchedEpisodes);
+
+      const savedEpisodes = await getEpisodesBySeason(
+        mediaObject.id,
+        seasonNumber,
+      );
+
+      setSeasonEpisodes((previous) => ({
+        ...previous,
+        [seasonNumber]: savedEpisodes,
+      }));
+
+      const progress = await getTvProgress(mediaObject.id);
+
+      setTvProgress(progress);
+    } catch (error) {
+      console.error("Season episodes fetch error:", error);
+
+      setEpisodeError(
+        error instanceof Error
+          ? error.message
+          : "Episodes could not be loaded.",
+      );
+    } finally {
+      setLoadingSeason(null);
+    }
+  };
+  const handleSeasonPress = async (seasonNumber: number) => {
+    if (expandedSeason === seasonNumber) {
+      setExpandedSeason(null);
+      return;
+    }
+
+    setExpandedSeason(seasonNumber);
+
+    await loadSeasonEpisodes(seasonNumber);
+  };
+  const handleEpisodeWatchedPress = async (episode: WatchedTvEpisode) => {
+    if (!mediaObject || contentType !== "tv") {
+      return;
+    }
+
+    try {
+      await toggleEpisodeWatched({
+        tvId: mediaObject.id,
+        seasonNumber: episode.season_number,
+        episodeNumber: episode.episode_number,
+        watched: !episode.isWatched,
+      });
+
+      const updatedEpisodes = await getEpisodesBySeason(
+        mediaObject.id,
+        episode.season_number,
+      );
+
+      setSeasonEpisodes((previous) => ({
+        ...previous,
+        [episode.season_number]: updatedEpisodes,
+      }));
+
+      const progress = await getTvProgress(mediaObject.id);
+
+      setTvProgress(progress);
+    } catch (error) {
+      console.error("Episode watched toggle error:", error);
+    }
+  };
+  const handleMarkSeasonWatched = async (
+    seasonNumber: number,
+    watched: boolean,
+  ) => {
+    if (!mediaObject || contentType !== "tv") {
+      return;
+    }
+
+    try {
+      await markSeasonWatched({
+        tvId: mediaObject.id,
+        seasonNumber,
+        watched,
+      });
+
+      const updatedEpisodes = await getEpisodesBySeason(
+        mediaObject.id,
+        seasonNumber,
+      );
+
+      setSeasonEpisodes((previous) => ({
+        ...previous,
+        [seasonNumber]: updatedEpisodes,
+      }));
+
+      const progress = await getTvProgress(mediaObject.id);
+
+      setTvProgress(progress);
+    } catch (error) {
+      console.error("Season watched toggle error:", error);
+    }
+  };
+  const renderTvSeasons = () => {
+    if (contentType !== "tv") {
+      return null;
+    }
+
+    const seasons = detailData?.seasons ?? mediaObject?.seasons ?? [];
+    if (seasons.length === 0) {
+      return (
+        <Text className="text-gray-400 mt-4">No season information found.</Text>
+      );
+    }
+
+    return (
+      <View className="mt-5">
+        <View className="flex-row items-center justify-between mb-3">
+          <Text className="text-lg text-accent font-bold">Episodes</Text>
+
+          <Text className="text-gray-300">
+            {tvProgress.watchedEpisodes}/{tvProgress.totalEpisodes} watched
+          </Text>
+        </View>
+
+        <View className="h-2 bg-secondary rounded-full mb-4 overflow-hidden">
+          <View
+            className="h-full bg-primary rounded-full"
+            style={{
+              width: `${tvProgress.percentage}%`,
+            }}
+          />
+        </View>
+
+        {episodeError && (
+          <Text className="text-red-400 mb-3">{episodeError}</Text>
+        )}
+
+        {seasons.map((season) => {
+          const seasonNumber = season.season_number;
+          const isExpanded = expandedSeason === seasonNumber;
+
+          const episodes = seasonEpisodes[seasonNumber] ?? [];
+
+          const watchedCount = episodes.filter(
+            (episode) => episode.isWatched,
+          ).length;
+
+          const isLoading = loadingSeason === seasonNumber;
+
+          const hasEpisodes = season.episode_count > 0;
+
+          return (
+            <View
+              key={seasonNumber}
+              className="mb-3 rounded-xl bg-secondary overflow-hidden"
+            >
+              <TouchableOpacity
+                onPress={() => handleSeasonPress(seasonNumber)}
+                className="flex-row items-center justify-between p-4"
+              >
+                <View className="flex-1">
+                  <Text className="text-white font-bold">
+                    {season.name || `Season ${seasonNumber}`}
+                  </Text>
+
+                  <Text className="text-gray-400 mt-1">
+                    {watchedCount}/{season.episode_count} watched
+                  </Text>
+                </View>
+
+                {isExpanded ? (
+                  <ChevronUp size={22} color="white" />
+                ) : (
+                  <ChevronDown size={22} color="white" />
+                )}
+              </TouchableOpacity>
+
+              {isExpanded && (
+                <View className="px-3 pb-3">
+                  {hasEpisodes && (
+                    <TouchableOpacity
+                      onPress={() =>
+                        handleMarkSeasonWatched(
+                          seasonNumber,
+                          watchedCount !== season.episode_count,
+                        )
+                      }
+                      className="bg-primary rounded-lg p-2 mb-2"
+                    >
+                      <Text className="text-white text-center font-medium">
+                        {watchedCount === season.episode_count
+                          ? "Mark Season Unwatched"
+                          : "Mark Season Watched"}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {isLoading && (
+                    <ActivityIndicator
+                      size="small"
+                      color="white"
+                      className="my-4"
+                    />
+                  )}
+
+                  {!isLoading &&
+                    episodes.map((episode) => (
+                      <TouchableOpacity
+                        key={`${episode.season_number}-${episode.episode_number}`}
+                        onPress={() => handleEpisodeWatchedPress(episode)}
+                        className="flex-row items-center py-3 border-b border-white/10"
+                      >
+                        <View className="w-8">
+                          {episode.isWatched ? (
+                            <Check size={20} color="white" />
+                          ) : (
+                            <View className="w-5 h-5 rounded-full border border-gray-400" />
+                          )}
+                        </View>
+
+                        <View className="flex-1">
+                          <Text
+                            className={
+                              episode.isWatched
+                                ? "text-gray-400 line-through"
+                                : "text-white"
+                            }
+                          >
+                            {episode.episode_number}. {episode.name}
+                          </Text>
+
+                          {episode.air_date && (
+                            <Text className="text-gray-500 text-xs mt-1">
+                              {episode.air_date}
+                            </Text>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+
+                  {!isLoading && episodes.length === 0 && (
+                    <Text className="text-gray-400 text-center py-4">
+                      No episodes loaded.
+                    </Text>
+                  )}
+                </View>
+              )}
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
   return (
     <View
       className="flex-1 bg-dark-200"
@@ -298,7 +628,7 @@ const DetailsPage = ({
                 </View>
                 <View className="w-full ">
                   <TouchableOpacity
-                    onPress={handleWatchedPress}
+                    onPress={handleWatchlistPress}
                     className={`flex flex-row gap-2 justify-center rounded-lg p-1 ${
                       !inWatchlist ? "bg-secondary" : "bg-primary"
                     }`}
@@ -324,7 +654,7 @@ const DetailsPage = ({
                 <RenderListItems
                   header="Production: "
                   ids={detailData?.production_companies?.map((g) =>
-                    "id" in g ? g.id : g
+                    "id" in g ? g.id : g,
                   )}
                   onGenrePress={(companyName) => {
                     setFilters({
@@ -338,7 +668,7 @@ const DetailsPage = ({
                       acc[item.id] = item.name; // id → name eşle
                       return acc;
                     },
-                    {} as Record<number, string>
+                    {} as Record<number, string>,
                   )}
                 />
               </View>
@@ -393,6 +723,18 @@ const DetailsPage = ({
           </TouchableOpacity>
         </View>
         <Divider dividerStyle={{ marginTop: 10, marginBottom: 10 }}></Divider>
+        {contentType === "tv" && (
+          <>
+            <Divider
+              dividerStyle={{
+                marginTop: 10,
+                marginBottom: 10,
+              }}
+            />
+
+            {renderTvSeasons()}
+          </>
+        )}
         <View className="flex-row">
           {mediaObject?.overview && (
             <Text className="text-gray-300">
@@ -410,7 +752,7 @@ const DetailsPage = ({
               Similar Content
             </Text>
             <SideScrollList
-              contentType="movie"
+              contentType={contentType}
               data={similarData}
               loading={similarLoading}
               error={similarError}

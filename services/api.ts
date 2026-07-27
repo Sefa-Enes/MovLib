@@ -1,4 +1,10 @@
-import { Company, MediaItem, Movie, Tv } from "@/interface/interfaces";
+import {
+  Company,
+  MediaItem,
+  Movie,
+  Tv,
+  TvEpisode,
+} from "@/interface/interfaces";
 import {
   buildDiscoverMovieParams,
   buildDiscoverTvParams,
@@ -173,4 +179,28 @@ export const fetchCompany = async ({
 
   const data = await response.json();
   return data;
+};
+
+export const fetchTvSeasonEpisodes = async ({
+  tvId,
+  seasonNumber,
+}: {
+  tvId: number;
+  seasonNumber: number;
+}): Promise<TvEpisode[]> => {
+  const endpoint =
+    `${TMDB_CONFIG.BASE_URL}/tv/${tvId}/season/${seasonNumber}` +
+    `?language=en-US`;
+
+  const response = await fetch(endpoint, {
+    method: "GET",
+    headers: TMDB_CONFIG.headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch season episodes: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.episodes;
 };
