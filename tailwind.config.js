@@ -7,14 +7,15 @@ module.exports = {
   theme: {
     extend: {
       colors:{
-        primary:"#153f6c",
-        secondary: "#4F677D",
-        accent: "#F4F8FB",
-        dark: {
-          100: "#2b2c28",
-          200: "#131515"
-
-        }
+        primary: "#00D9FF",       // neon cyan-mavi (ana vurgu)
+  primaryGlow: "#00D9FF80", // glow/shadow için alpha versiyonu
+  secondary: "#0A84FF",     // daha doygun mavi (buton/link)
+  accent: "#d3f1f2",
+  
+  dark: {
+    100: "#1A1F36", // Koyu lacivert/gri karışımı (kartlar için)
+    200: "#0F1322", // Çok derin, siyaha yakın gece mavisi (arkaplan)
+  },
       }
     },
   },

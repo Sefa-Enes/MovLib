@@ -156,6 +156,12 @@ export interface MediaItem extends BaseContent {
 
   last_episode_to_air?: TvEpisode | null;
 }
+export interface SeasonProgress {
+  seasonNumber: number;
+  totalEpisodes: number;
+  watchedEpisodes: number;
+  percentage: number;
+}
 export interface Company {
   description?: string;
   headquarters?: string;

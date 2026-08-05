@@ -1,4 +1,10 @@
-import { Movie, Tv, TvEpisode, WatchedTvEpisode } from "@/interface/interfaces";
+import {
+  Movie,
+  SeasonProgress,
+  Tv,
+  TvEpisode,
+  WatchedTvEpisode,
+} from "@/interface/interfaces";
 
 // Web storage helperss
 const getWebStorage = () => {
@@ -25,6 +31,7 @@ const getWebTvShows = async (): Promise<any[]> => {
 const setWebTvShows = async (tvShows: any[]): Promise<void> => {
   getWebStorage().setItem("tv_watchlist", JSON.stringify(tvShows));
 };
+
 const getWebEpisodes = async (): Promise<any[]> => {
   const data = getWebStorage().getItem("tv_episodes");
   return data ? JSON.parse(data) : [];
@@ -34,7 +41,33 @@ const setWebEpisodes = async (episodes: any[]): Promise<void> => {
   getWebStorage().setItem("tv_episodes", JSON.stringify(episodes));
 };
 // ============= WEB IMPLEMENTATIONS =============
+export const getSeasonProgress = async (
+  tvId: number,
+  seasonNumber: number,
+): Promise<SeasonProgress> => {
+  const episodes = await getWebEpisodes();
 
+  const seasonEpisodes = episodes.filter(
+    (episode) =>
+      episode.tv_id === tvId && episode.season_number === seasonNumber,
+  );
+
+  const totalEpisodes = seasonEpisodes.length;
+
+  const watchedEpisodes = seasonEpisodes.filter(
+    (episode) => episode.isWatched,
+  ).length;
+
+  return {
+    seasonNumber,
+    totalEpisodes,
+    watchedEpisodes,
+    percentage:
+      totalEpisodes === 0
+        ? 0
+        : Math.round((watchedEpisodes / totalEpisodes) * 100),
+  };
+};
 export const insertMovieWithGenres = async (
   movie: Movie,
   isWatched: boolean = false,

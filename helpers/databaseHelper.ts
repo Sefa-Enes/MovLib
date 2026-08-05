@@ -1,5 +1,11 @@
 import { db } from "@/db/database";
-import { Movie, Tv, TvEpisode, WatchedTvEpisode } from "@/interface/interfaces";
+import {
+  Movie,
+  SeasonProgress,
+  Tv,
+  TvEpisode,
+  WatchedTvEpisode,
+} from "@/interface/interfaces";
 import { Platform } from "react-native";
 
 // Helper to get non-null db for native platforms
@@ -780,6 +786,73 @@ export const getTvProgress = async (
   const watchedEpisodes = result?.watchedEpisodes ?? 0;
 
   return {
+    totalEpisodes,
+    watchedEpisodes,
+    percentage:
+      totalEpisodes === 0
+        ? 0
+        : Math.round((watchedEpisodes / totalEpisodes) * 100),
+  };
+};
+export const getSeasonProgress = async (
+  tvId: number,
+  seasonNumber: number,
+): Promise<SeasonProgress> => {
+  if (Platform.OS === "web") {
+    const episodes = await getWebEpisodes();
+
+    const seasonEpisodes = episodes.filter(
+      (episode) =>
+        episode.tv_id === tvId && episode.season_number === seasonNumber,
+    );
+
+    const totalEpisodes = seasonEpisodes.length;
+
+    const watchedEpisodes = seasonEpisodes.filter(
+      (episode) => episode.isWatched,
+    ).length;
+
+    return {
+      seasonNumber,
+      totalEpisodes,
+      watchedEpisodes,
+      percentage:
+        totalEpisodes === 0
+          ? 0
+          : Math.round((watchedEpisodes / totalEpisodes) * 100),
+    };
+  }
+
+  const database = getDB();
+
+  const result = await database.getFirstAsync<{
+    totalEpisodes: number;
+    watchedEpisodes: number;
+  }>(
+    `
+    SELECT
+      COUNT(*) AS totalEpisodes,
+      COALESCE(
+        SUM(
+          CASE
+            WHEN isWatched = 1 THEN 1
+            ELSE 0
+          END
+        ),
+        0
+      ) AS watchedEpisodes
+    FROM TvEpisodes
+    WHERE tv_id = ?
+      AND season_number = ?
+    `,
+    [tvId, seasonNumber],
+  );
+
+  const totalEpisodes = result?.totalEpisodes ?? 0;
+  const watchedEpisodes = result?.watchedEpisodes ?? 0;
+
+  return {
+    seasonNumber,
     totalEpisodes,
     watchedEpisodes,
     percentage:

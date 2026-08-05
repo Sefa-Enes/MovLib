@@ -1,5 +1,5 @@
 import { db } from "@/db/database";
-import { Movie, Tv } from "@/interface/interfaces";
+import { Movie, SeasonProgress, Tv } from "@/interface/interfaces";
 
 const getDB = () => {
   if (!db) {
@@ -10,7 +10,7 @@ const getDB = () => {
 
 export const insertMovieWithGenres = async (
   movie: Movie,
-  isWatched: boolean = false
+  isWatched: boolean = false,
 ) => {
   const database = getDB();
 
@@ -27,7 +27,7 @@ export const insertMovieWithGenres = async (
           movie.release_date || null,
           movie.vote_average || 0,
           isWatched ? 1 : 0,
-        ]
+        ],
       );
 
       await database.runAsync(`DELETE FROM MovieGenre WHERE movie_id = ?`, [
@@ -38,7 +38,7 @@ export const insertMovieWithGenres = async (
         for (const genreId of movie.genre_ids) {
           await database.runAsync(
             `INSERT INTO MovieGenre (movie_id, genre_id) VALUES (?, ?)`,
-            [movie.id, genreId]
+            [movie.id, genreId],
           );
         }
       }
@@ -53,7 +53,7 @@ export const insertMovieWithGenres = async (
 
 export const insertTvWithGenres = async (
   tv: Tv,
-  isWatched: boolean = false
+  isWatched: boolean = false,
 ) => {
   const database = getDB();
 
@@ -70,7 +70,7 @@ export const insertTvWithGenres = async (
           tv.first_air_date || null,
           tv.vote_average || 0,
           isWatched ? 1 : 0,
-        ]
+        ],
       );
 
       await database.runAsync(`DELETE FROM TvGenre WHERE tv_id = ?`, [tv.id]);
@@ -79,7 +79,7 @@ export const insertTvWithGenres = async (
         for (const genreId of tv.genre_ids) {
           await database.runAsync(
             `INSERT INTO TvGenre (tv_id, genre_id) VALUES (?, ?)`,
-            [tv.id, genreId]
+            [tv.id, genreId],
           );
         }
       }
@@ -266,7 +266,7 @@ export const getMovieById = async (id: number) => {
       WHERE m.id = ?
       GROUP BY m.id
     `,
-      [id]
+      [id],
     );
 
     if (!dbMovie) return null;
@@ -300,7 +300,7 @@ export const getTvShowById = async (id: number) => {
       WHERE t.id = ?
       GROUP BY t.id
     `,
-      [id]
+      [id],
     );
 
     if (!tvShow) return null;
@@ -313,4 +313,46 @@ export const getTvShowById = async (id: number) => {
     console.error("❌ Get TV show by id error:", error);
     return null;
   }
+};
+export const getSeasonProgress = async (
+  tvId: number,
+  seasonNumber: number,
+): Promise<SeasonProgress> => {
+  const database = getDB();
+
+  const result = await database.getFirstAsync<{
+    totalEpisodes: number;
+    watchedEpisodes: number;
+  }>(
+    `
+    SELECT
+      COUNT(*) AS totalEpisodes,
+      COALESCE(
+        SUM(
+          CASE
+            WHEN isWatched = 1 THEN 1
+            ELSE 0
+          END
+        ),
+        0
+      ) AS watchedEpisodes
+    FROM TvEpisodes
+    WHERE tv_id = ?
+      AND season_number = ?
+    `,
+    [tvId, seasonNumber],
+  );
+
+  const totalEpisodes = result?.totalEpisodes ?? 0;
+  const watchedEpisodes = result?.watchedEpisodes ?? 0;
+
+  return {
+    seasonNumber,
+    totalEpisodes,
+    watchedEpisodes,
+    percentage:
+      totalEpisodes === 0
+        ? 0
+        : Math.round((watchedEpisodes / totalEpisodes) * 100),
+  };
 };

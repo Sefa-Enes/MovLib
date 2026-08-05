@@ -9,7 +9,7 @@ import {
   toggleMovieWatched,
   toggleTvWatched,
 } from "@/helpers/databaseHelper";
-import { MediaItem } from "@/interface/interfaces";
+import { MediaItem, Movie, Tv } from "@/interface/interfaces";
 import { Href, router } from "expo-router";
 import { Check, Eye, Plus, Star } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
@@ -68,17 +68,35 @@ const ContentCard = ({
   }, [id, contentType]);
 
   const dbFns = useMemo(() => {
-    return contentType === "movie"
-      ? {
-          insert: insertMovieWithGenres,
-          remove: deleteMovie,
-          toggleWatched: toggleMovieWatched,
-        }
-      : {
-          insert: insertTvWithGenres,
-          remove: deleteTvShow,
-          toggleWatched: toggleTvWatched,
-        };
+    if (contentType === "movie") {
+      return {
+        insert: async (media: MediaItem, watched: boolean) => {
+          return insertMovieWithGenres(media as Movie, watched);
+        },
+
+        remove: async (mediaId: number) => {
+          return deleteMovie(mediaId);
+        },
+
+        toggleWatched: async (mediaId: number, watched: boolean) => {
+          return toggleMovieWatched(mediaId, watched);
+        },
+      };
+    }
+
+    return {
+      insert: async (media: MediaItem, watched: boolean) => {
+        return insertTvWithGenres(media as Tv, watched);
+      },
+
+      remove: async (mediaId: number) => {
+        return deleteTvShow(mediaId);
+      },
+
+      toggleWatched: async (mediaId: number, watched: boolean) => {
+        return toggleTvWatched(mediaId, watched);
+      },
+    };
   }, [contentType]);
 
   // 🔹 İzleme listesine ekle / kaldır
@@ -100,6 +118,10 @@ const ContentCard = ({
 
   // 🔹 İzlenme durumunu değiştir
   const handleWatchedPress = async () => {
+    if (contentType !== "movie") {
+      return;
+    }
+
     try {
       if (!isWatched) {
         if (inWatchlist) {
@@ -108,6 +130,7 @@ const ContentCard = ({
           await dbFns.insert(item, true);
           setInWatchlist(true);
         }
+
         setIsWatched(true);
       } else {
         await dbFns.toggleWatched(id, false);
@@ -138,16 +161,18 @@ const ContentCard = ({
           className={`w-full rounded-lg ${!isGrid ? "h-60" : "h-52"}`}
         />
 
-        <View className="absolute top-2 right-2 bg- rounded-lg flex-row items-center">
-          <TouchableOpacity
-            onPress={handleWatchedPress}
-            className={`rounded-lg p-1 ${
-              !isWatched ? "bg-secondary" : "bg-primary"
-            }`}
-          >
-            <Eye size={18} color={isWatched ? "white" : "darkgray"} />
-          </TouchableOpacity>
-        </View>
+        {contentType === "movie" && (
+          <View className="absolute top-2 right-2 rounded-lg flex-row items-center">
+            <TouchableOpacity
+              onPress={handleWatchedPress}
+              className={`rounded-lg p-1 ${
+                !isWatched ? "bg-secondary" : "bg-primary"
+              }`}
+            >
+              <Eye size={18} color={isWatched ? "white" : "lightgray"} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* 🔹 Grid görünüm alt overlay */}
         {isGrid && (

@@ -17,7 +17,7 @@ export const FilterModal = ({ filters, setFilters, onPress }: Props) => {
         onPress={() => setModalOpen(true)}
         className="w-16 h-16 rounded-full bg-primary items-center justify-center"
       >
-        <Filter size={20} className="text-gray-400" />
+        <Filter size={20} className="text-accent" />
       </TouchableOpacity>
 
       <Modal
