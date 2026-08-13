@@ -192,15 +192,28 @@ export const fetchTvSeasonEpisodes = async ({
     `${TMDB_CONFIG.BASE_URL}/tv/${tvId}/season/${seasonNumber}` +
     `?language=en-US`;
 
+  console.log("📺 Fetching TMDB season episodes:", endpoint);
+
   const response = await fetch(endpoint, {
     method: "GET",
     headers: TMDB_CONFIG.headers,
   });
 
+  const responseText = await response.text();
+
+  console.log(
+    "📺 TMDB season response:",
+    response.status,
+    responseText.slice(0, 300),
+  );
+
   if (!response.ok) {
-    throw new Error(`Failed to fetch season episodes: ${response.statusText}`);
+    throw new Error(
+      `Failed to fetch season episodes: ${response.status} ${response.statusText}`,
+    );
   }
 
-  const data = await response.json();
-  return data.episodes;
+  const data = JSON.parse(responseText);
+
+  return data.episodes ?? [];
 };

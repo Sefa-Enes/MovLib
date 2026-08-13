@@ -19,7 +19,6 @@ import {
   Movie,
   SeasonProgress,
   Tv,
-  UnitedWithDb,
   WatchedTvEpisode,
 } from "@/interface/interfaces";
 import { fetchSimilar, fetchTvSeasonEpisodes } from "@/services/api";
@@ -80,7 +79,6 @@ const DetailsPage = ({
   const [detailDrawer, setDetailDrawer] = useState<boolean>(false);
   const [posterModalOpen, setPosterModalOpen] = useState(false);
 
-  const [fromDb, setFromDb] = useState<UnitedWithDb | null>(null);
   const [inWatchlist, setInWatchlist] = useState(false);
   const [isWatched, setIsWatched] = useState(false);
 
@@ -103,24 +101,26 @@ const DetailsPage = ({
   });
   // 🔹 DB'den mevcut durumu al
   useEffect(() => {
-    if (mediaObject) {
-      const fetchData = async () => {
-        try {
-          const data =
-            contentType === "movie"
-              ? await getMovieById(mediaObject.id)
-              : await getTvShowById(mediaObject.id);
-          setFromDb(data as UnitedWithDb);
-          setInWatchlist(!!data);
-          setIsWatched(!!data?.isWatched);
-        } catch (err) {
-          console.error("DB fetch error:", err);
-        }
-      };
-
-      fetchData();
+    if (!mediaObject) {
+      return;
     }
-  }, [mediaObject, contentType]);
+
+    const fetchData = async () => {
+      try {
+        const data =
+          contentType === "movie"
+            ? await getMovieById(mediaObject.id)
+            : await getTvShowById(mediaObject.id);
+
+        setInWatchlist(!!data);
+        setIsWatched(!!data?.isWatched);
+      } catch (err) {
+        console.error("DB fetch error:", err);
+      }
+    };
+
+    fetchData();
+  }, [mediaObject?.id, contentType]);
 
   useEffect(() => {
     if (
@@ -179,7 +179,55 @@ const DetailsPage = ({
       cancelled = true;
     };
   }, [contentType, mediaObject?.id, detailData?.seasons]);
+  const ensureSeasonEpisodes = async (
+    seasonNumber: number,
+  ): Promise<WatchedTvEpisode[]> => {
+    if (!mediaObject || contentType !== "tv") {
+      return [];
+    }
 
+    const existingEpisodes = seasonEpisodes[seasonNumber];
+
+    if (existingEpisodes && existingEpisodes.length > 0) {
+      return existingEpisodes;
+    }
+
+    try {
+      setLoadingSeason(seasonNumber);
+      setEpisodeError(null);
+
+      const fetchedEpisodes = await fetchTvSeasonEpisodes({
+        tvId: mediaObject.id,
+        seasonNumber,
+      });
+
+      await upsertTvEpisodes(mediaObject.id, fetchedEpisodes);
+
+      const savedEpisodes = await getEpisodesBySeason(
+        mediaObject.id,
+        seasonNumber,
+      );
+
+      setSeasonEpisodes((previous) => ({
+        ...previous,
+        [seasonNumber]: savedEpisodes,
+      }));
+
+      return savedEpisodes;
+    } catch (error) {
+      console.error("Season episodes fetch error:", error);
+
+      setEpisodeError(
+        error instanceof Error
+          ? error.message
+          : "Episodes could not be loaded.",
+      );
+
+      return [];
+    } finally {
+      setLoadingSeason(null);
+    }
+  };
   const dbFns = useMemo(() => {
     if (contentType === "movie") {
       return {
@@ -279,8 +327,9 @@ const DetailsPage = ({
       return;
     }
 
-    // Daha önce yüklenmişse tekrar API çağrısı yapma
-    if (seasonEpisodes[seasonNumber]) {
+    const existingEpisodes = seasonEpisodes[seasonNumber];
+
+    if (existingEpisodes && existingEpisodes.length > 0) {
       return;
     }
 
@@ -305,9 +354,19 @@ const DetailsPage = ({
         [seasonNumber]: savedEpisodes,
       }));
 
-      const progress = await getTvProgress(mediaObject.id);
+      const updatedProgress = await getTvProgress(mediaObject.id);
 
-      setTvProgress(progress);
+      setTvProgress(updatedProgress);
+
+      const updatedSeasonProgress = await getSeasonProgress(
+        mediaObject.id,
+        seasonNumber,
+      );
+
+      setSeasonProgress((previous) => ({
+        ...previous,
+        [seasonNumber]: updatedSeasonProgress,
+      }));
     } catch (error) {
       console.error("Season episodes fetch error:", error);
 
@@ -328,7 +387,25 @@ const DetailsPage = ({
 
     setExpandedSeason(seasonNumber);
 
-    await loadSeasonEpisodes(seasonNumber);
+    const episodes = await ensureSeasonEpisodes(seasonNumber);
+
+    if (!mediaObject) {
+      return;
+    }
+
+    const progress = await getTvProgress(mediaObject.id);
+
+    setTvProgress(progress);
+
+    const seasonProgressData = await getSeasonProgress(
+      mediaObject.id,
+      seasonNumber,
+    );
+
+    setSeasonProgress((previous) => ({
+      ...previous,
+      [seasonNumber]: seasonProgressData,
+    }));
   };
   const handleEpisodeWatchedPress = async (episode: WatchedTvEpisode) => {
     if (!mediaObject || contentType !== "tv") {
@@ -380,27 +457,16 @@ const DetailsPage = ({
     }
 
     try {
-      let episodes = seasonEpisodes[seasonNumber];
+      // Sezon kapalı olsa bile bölümleri getirir
+      const episodes = await ensureSeasonEpisodes(seasonNumber);
 
-      // Sezon daha önce açılmadıysa önce bölümleri yükle
-      if (!episodes) {
-        const fetchedEpisodes = await fetchTvSeasonEpisodes({
-          tvId: mediaObject.id,
-          seasonNumber,
-        });
-
-        await upsertTvEpisodes(mediaObject.id, fetchedEpisodes);
-
-        episodes = await getEpisodesBySeason(mediaObject.id, seasonNumber);
-
-        setSeasonEpisodes((previous) => ({
-          ...previous,
-          [seasonNumber]: episodes ?? [],
-        }));
+      if (episodes.length === 0) {
+        return;
       }
 
-      const airedEpisodes =
-        episodes?.filter((episode) => isEpisodeAired(episode.air_date)) ?? [];
+      const airedEpisodes = episodes.filter((episode) =>
+        isEpisodeAired(episode.air_date),
+      );
 
       for (const episode of airedEpisodes) {
         await toggleEpisodeWatched({
@@ -421,9 +487,9 @@ const DetailsPage = ({
         [seasonNumber]: updatedEpisodes,
       }));
 
-      const progress = await getTvProgress(mediaObject.id);
+      const updatedTvProgress = await getTvProgress(mediaObject.id);
 
-      setTvProgress(progress);
+      setTvProgress(updatedTvProgress);
 
       const updatedSeasonProgress = await getSeasonProgress(
         mediaObject.id,
@@ -438,7 +504,6 @@ const DetailsPage = ({
       console.error("Season watched toggle error:", error);
     }
   };
-
   return (
     <View
       className="flex-1 bg-dark-200"
