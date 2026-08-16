@@ -1,14 +1,24 @@
-import React from "react";
-import { ActivityIndicator, FlatList, Text, View } from "react-native";
+import React, { useMemo } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import ContentCard from "./ContentCard";
 
+const CARD_WIDTH = 144;
+const CARD_HORIZONTAL_MARGIN = 8;
+const COLUMN_GAP = 8;
+const LIST_HORIZONTAL_PADDING = 20;
 const GridList = ({
   contentType,
   data,
   loading,
   error,
 }: {
-  contentType: string;
+  contentType: "movie" | "tv";
   data: any;
   loading: boolean;
   error: Error | null;
@@ -25,11 +35,20 @@ const GridList = ({
   if (error) {
     return <Text>Error: {error?.message}</Text>;
   }
+  const { width } = useWindowDimensions();
+  const columnCount = useMemo(() => {
+    const availableWidth = width - LIST_HORIZONTAL_PADDING * 2;
+
+    const itemWidth = CARD_WIDTH + CARD_HORIZONTAL_MARGIN * 2 + COLUMN_GAP;
+
+    return Math.max(1, Math.floor((availableWidth + COLUMN_GAP) / itemWidth));
+  }, [width]);
   const pathHead = contentType === "tv" ? "tv" : "movies";
   return (
     <View className="flex-1 mt-5">
       <FlatList
-        data={data}
+        data={data ?? []}
+        key={columnCount}
         renderItem={({ item }) => (
           <ContentCard
             {...item}
@@ -39,13 +58,14 @@ const GridList = ({
           />
         )}
         keyExtractor={(item) => item.id.toString()}
-        numColumns={3}
+        numColumns={columnCount}
         columnWrapperStyle={{
-          justifyContent: "space-evenly", //, "space-between"
-          gap: 5,
-          marginBottom: 5,
+          justifyContent: "center",
+          gap: COLUMN_GAP,
         }}
-        className="mt-2 pb-32"
+        contentContainerStyle={{
+          paddingBottom: 120,
+        }}
         scrollEnabled={false}
         ListEmptyComponent={
           !loading &&

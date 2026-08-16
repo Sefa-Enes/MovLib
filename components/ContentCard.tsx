@@ -145,10 +145,7 @@ const ContentCard = ({
     router.push(`/${pathHead}/${id}` as Href);
   };
   return (
-    <TouchableOpacity
-      onPress={handleRedirect}
-      className={`${!isGrid ? "w-36 m-2" : "w-[32%]"}`}
-    >
+    <TouchableOpacity onPress={handleRedirect} className="w-36 m-2">
       {/* 🔹 IMAGE WRAPPER */}
       <View className="relative">
         <Image
@@ -158,7 +155,7 @@ const ContentCard = ({
               : "https://placehold.co/600x400/1a1a1a/ffffff.png",
           }}
           resizeMode="cover"
-          className={`w-full rounded-lg ${!isGrid ? "h-60" : "h-52"}`}
+          className="w-full h-60 rounded-lg"
         />
 
         {contentType === "movie" && (
