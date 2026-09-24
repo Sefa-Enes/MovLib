@@ -7,6 +7,7 @@
 3. Inspect the existing public helper exports.
 4. Compare API response types with database types.
 5. Preserve user-owned fields during metadata refresh.
+6. For backend changes: read the relevant `internal/store` and `internal/httpapi` file first. The rules below are enforced in SQL, not by caller discipline — keep them that way.
 
 ## Rules
 
@@ -23,6 +24,18 @@
 - Do not overwrite `isWatched`, `watched_at`, or `rewatch_count` during TMDB upserts.
 - Keep responsive layouts based on flex sizing rather than fixed widths.
 
+## Backend rules (Go / PostgreSQL)
+
+- The app reaches TMDB **only** through the backend (`GET /tmdb/{path...}`). The TMDB API key lives in the backend environment (`TMDB_API_KEY`), never in the app.
+- Upserts are metadata-only: `ON CONFLICT` clauses may update title/poster/dates/rating/episode metadata, never `is_watched`, `watched_at`, `rewatch_count`, `is_favorite`, or `added_at`.
+- Deletion is soft: `is_deleted = TRUE` on `movies` / `tv_shows`. All reads filter `is_deleted = FALSE`. Upserting a soft-deleted id resurrects the row.
+- `is_deleted` exists on every domain table for symmetry, but is only ever queried on `movies` and `tv_shows`.
+- Mark Season Watched (`watched = true`) touches aired episodes only — enforced in SQL (`air_date IS NOT NULL AND air_date <= CURRENT_DATE`). Un-marking is unrestricted.
+- `rewatch_count` increments when an item is marked watched while currently unwatched; unwatching never decrements.
+- `watched_at` is stamped `now()` on watch, `NULL` on unwatch.
+- TMDB ids are primary keys everywhere — no synthetic serial ids.
+- BOOLEAN, not 0/1 integers; TIMESTAMPTZ for instants; DATE for calendar dates.
+
 ## Testing
 
 TypeScript check:
@@ -37,6 +50,20 @@ Start with a clean Metro cache:
 npx expo start -c
 ```
 
+Backend check:
+
+```powershell
+go build ./...
+go vet ./...
+```
+
+Backend smoke test (stack running via `docker compose up -d --build`):
+
+```powershell
+curl.exe http://localhost:8080/healthz
+curl.exe http://localhost:8080/tmdb/search/movie?query=fight+club
+```
+
 ## TV episode test checklist
 
 - TV detail request is made even when a summary `mediaObject` already exists.
@@ -49,8 +76,7 @@ npx expo start -c
 - Mark Season Watched affects aired episodes only.
 - Future episodes show `Not Released` and are disabled.
 - Episode still images are rendered when `still_path` exists.
-- Web uses `tv_episodes` localStorage.
-- Native uses `TvEpisodes` SQLite table.
+- Episodes are read/written through the backend API (`GET`/`PUT /tv/{id}/season/{s}/episodes`), not platform storage.
 
 ## UI test checklist
 

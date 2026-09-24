@@ -1,379 +1,154 @@
-# MovLib — AI Agent Project Context
+# MovLib — Data Model & Import
 
-## Project overview
+## Purpose
 
-MovLib is a React Native + Expo Router personal media tracking application for movies, TV shows, anime, and similar content. It started as a personal alternative to TV Time.
+This document describes the unified PostgreSQL data model behind MovLib, the API that exposes it, and the import story. It is the single source of truth for storage — replacing the old fragmented SQLite (native) / localStorage (web) schemas.
 
-TMDB is used for catalog data and metadata. User-owned data must remain local: watchlist membership, watched status, episode progress, watch timestamps, favorites, rewatch count, and future user notes/ratings.
+Source of truth: `MovLibBack/migrations/001_init.up.sql` + `002_soft_delete.up.sql`. Migrations are embedded in the Go binary and auto-applied at startup, in filename order, tracked in `schema_migrations`.
 
-## Main goals
+## Design conventions
 
-- Discover movies and TV shows
-- Search and filter TMDB content
-- Open movie and TV detail pages
-- Add/remove movies and shows from a local watchlist
-- Track movie watched status
-- Track TV shows by season and episode
-- Mark aired episodes as watched/unwatched
-- Show season and overall TV progress
-- Import TV Time JSON data
-- Later support CSV as a complementary import source
-- Work on native and web platforms
+- **TMDB ids are primary keys** — no synthetic serial ids. A movie/show is identified by its TMDB id everywhere.
+- **Metadata vs user-owned columns.** Metadata (title, poster_path, dates, vote_average, episode names/overview/air_date/still_path) may be refreshed at any time. User-owned columns (`is_watched`, `watched_at`, `rewatch_count`, `is_favorite`, `added_at`) must never be touched by metadata refreshes — the backend only writes them on explicit user actions. This is enforced structurally: upserts use `ON CONFLICT` clauses that list metadata columns only.
+- **BOOLEAN, not 0/1 integers; TIMESTAMPTZ for instants; DATE for calendar dates.** The API serializes DATE as `'YYYY-MM-DD'` and TIMESTAMPTZ as ISO-8601, so existing app comparisons (e.g. `isEpisodeAired`) keep working unchanged.
+- **Soft delete.** `is_deleted BOOLEAN NOT NULL DEFAULT FALSE` exists on every domain table for systematic consistency, but is actively used (filtered/written) only on `movies` and `tv_shows`. "Deleting" = `UPDATE is_deleted = TRUE`; all reads filter `is_deleted = FALSE`; upserting a soft-deleted id resurrects the row with all user state intact.
 
-## Technology
+## Schema
 
-- React Native
-- Expo SDK 54
-- Expo Router
-- TypeScript
-- NativeWind / Tailwind
-- lucide-react-native
-- TMDB API
-- Native: expo-sqlite
-- Web: localStorage
+### genres
 
-Known versions:
+One table for both media types (TMDB movie and TV genre ids share the same numeric space). Seeded from TMDB's official genre lists (28 movie + 19 TV genres, unioned) — the app no longer seeds anything.
 
 ```text
-expo 54.0.36
-expo-router 6.0.24
-babel-preset-expo 54.0.12
+id   INTEGER PRIMARY KEY   -- TMDB genre id
+name TEXT NOT NULL
 ```
 
-## Project tree
+### movies
+
+Previously `MovieWL` (SQLite) / `movies_watchlist` (localStorage).
 
 ```text
-app/
-├── _layout.tsx
-├── globals.css
-├── (tabs)/
-│   ├── _layout.tsx
-│   ├── index.tsx
-│   ├── search.tsx
-│   ├── library.tsx
-│   └── profile.tsx
-├── movies/
-│   └── [id].tsx
-└── tv/
-    └── [id].tsx
+id            BIGINT PRIMARY KEY   -- TMDB movie id
+title         TEXT NOT NULL
+poster_path   TEXT
+release_date  DATE
+vote_average  REAL
 
-components/
-├── CategoryClickable.tsx
-├── ContentCard.tsx
-├── FilterModal.tsx
-├── GridList.tsx
-├── SearchBox.tsx
-├── SideScrollList.tsx
-├── VideoPlayer.tsx
-├── Page/
-│   └── DetailsPage.tsx
-├── Episodes/
-│   ├── EpisodeRow.tsx
-│   └── SeasonEpisodeList.tsx
-└── ui/
-    ├── Divider.tsx
-    ├── ExpandableView.tsx
-    └── SegmentedButton.tsx
+-- user-owned state
+is_watched    BOOLEAN NOT NULL DEFAULT FALSE
+watched_at    TIMESTAMPTZ          -- when it was (last) marked watched
+rewatch_count INTEGER NOT NULL DEFAULT 0
+is_favorite   BOOLEAN NOT NULL DEFAULT FALSE
 
-constants/Genre.ts
-context/GlobalContext.tsx
-
-db/
-├── database.ts
-├── database.native.ts
-└── database.web.ts
-
-helpers/
-├── GeneralHelpers.ts
-├── databaseHelper.ts
-├── databaseHelper.native.ts
-└── databaseHelper.web.ts
-
-hooks/
-├── useChoseFetch.ts
-└── useFetch.ts
-
-interface/interfaces.d.ts
-services/api.ts
-utils/
-├── episodeHelpers.ts
-└── queryBuilder.ts
+added_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+is_deleted    BOOLEAN NOT NULL DEFAULT FALSE   -- 002, active
 ```
 
-## Routes
+### tv_shows
+
+Previously `TvWL`. **Show-level `isWatched` is intentionally dropped** — TV progress is episode-derived only (project rule).
 
 ```text
-app/(tabs)/index.tsx     → Home
-app/(tabs)/search.tsx    → Search
-app/(tabs)/library.tsx   → Library
-app/(tabs)/profile.tsx   → Profile
-app/movies/[id].tsx      → Movie details
-app/tv/[id].tsx          → TV details
+id             BIGINT PRIMARY KEY   -- TMDB tv id
+name           TEXT NOT NULL
+poster_path    TEXT
+first_air_date DATE
+vote_average   REAL
+
+-- user-owned state
+is_favorite    BOOLEAN NOT NULL DEFAULT FALSE
+
+added_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+is_deleted     BOOLEAN NOT NULL DEFAULT FALSE   -- 002, active
 ```
 
-`app/(tabs)/_layout.tsx` owns the bottom tab navigation. The screen content is implemented in the corresponding route files.
+### movie_genres / tv_genres
 
-## Platform storage
-
-Native uses SQLite through:
+Replaces the old four-table genre setup (`MovieGenre` + `GenresMovie`, `TvGenre` + `GenresTv`). A metadata refresh may delete + re-insert these rows freely — they carry no user state.
 
 ```text
-db/database.native.ts
+movie_genres: (movie_id BIGINT → movies.id ON DELETE CASCADE,
+               genre_id INTEGER → genres.id ON DELETE CASCADE,
+               PRIMARY KEY (movie_id, genre_id))
+tv_genres:    (tv_id    BIGINT → tv_shows.id ON DELETE CASCADE,
+               genre_id INTEGER → genres.id ON DELETE CASCADE,
+               PRIMARY KEY (tv_id, genre_id))
 ```
 
-Web uses localStorage through:
+### tv_episodes
+
+Previously `TvEpisodes` (SQLite) / `tv_episodes` (localStorage). Composite PK replaces the old auto-increment rowid — nothing in the app referenced that local id (clients use `tmdb_episode_id`).
 
 ```text
-db/database.web.ts
+tv_id           BIGINT NOT NULL → tv_shows.id ON DELETE CASCADE
+season_number   INTEGER NOT NULL
+episode_number  INTEGER NOT NULL
+tmdb_episode_id BIGINT            -- TMDB's own episode id (the 'id' the app renders)
+name            TEXT NOT NULL
+overview        TEXT
+air_date        DATE              -- 'YYYY-MM-DD' or NULL (never aired / unknown)
+still_path      TEXT
+
+-- user-owned state
+is_watched      BOOLEAN NOT NULL DEFAULT FALSE
+watched_at      TIMESTAMPTZ
+rewatch_count   INTEGER NOT NULL DEFAULT 0
+
+updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+is_deleted      BOOLEAN NOT NULL DEFAULT FALSE   -- 002, present but never queried
+
+PRIMARY KEY (tv_id, season_number, episode_number)
 ```
 
-There is also a platform-agnostic helper:
+The composite PK covers the queries the app runs: `WHERE tv_id = ?` (show progress / all episodes) and `WHERE tv_id = ? AND season_number = ?` (season list / season progress).
+
+## State semantics
+
+- **`rewatch_count`** increments when an item is marked watched while currently unwatched; unwatching never decrements. Each fresh watch session counts once.
+- **`watched_at`** is stamped `now()` on watch, `NULL` on unwatch (unwatch = mistake correction, not a new state).
+- **Mark Season Watched** (`watched = true`) touches aired episodes only — enforced in SQL (`air_date IS NOT NULL AND air_date <= CURRENT_DATE`). Un-marking is unrestricted so mistakes can be undone. A season with no stored aired episodes returns 404 (the client must fetch the season first).
+- **Single-episode toggle** trusts the client (the app checks `isEpisodeAired` before allowing it).
+
+## API surface
 
 ```text
-helpers/databaseHelper.ts
+GET    /healthz
+
+GET    /tmdb/{path...}                    TMDB proxy (key injected server-side)
+
+PUT    /movies/{id}                       upsert metadata (never user state)
+GET    /movies                            list; ?watched=true&favorite=true
+GET    /movies/{id}
+PATCH  /movies/{id}/watched               body {"watched": bool}
+PATCH  /movies/{id}/favorite              body {"favorite": bool}
+DELETE /movies/{id}                       soft delete
+
+PUT    /tv/{id}                           upsert metadata
+GET    /tv                                list; ?favorite=true
+GET    /tv/{id}
+PATCH  /tv/{id}/favorite                  body {"favorite": bool}
+DELETE /tv/{id}                           soft delete
+
+PUT    /tv/{id}/season/{s}/episodes       batch upsert metadata (TMDB season shape)
+GET    /tv/{id}/season/{s}/episodes       list season episodes
+PATCH  /tv/{id}/season/{s}/episodes/{e}/watched   body {"watched": bool}
+PATCH  /tv/{id}/season/{s}/watched        body {"watched": bool} (aired-only when true)
+GET    /tv/{id}/season/{s}/progress
+GET    /tv/{id}/progress
 ```
 
-Important: Expo/Metro may resolve this import to the platform-specific file:
+Conventions: TMDB ids in the URL path; bodies carry metadata or an explicit state change; errors are `{"error": "..."}` (400 bad input / 404 not found / 500 internal, logged); mutations return 204 No Content; empty arrays serialize as `[]`, never `null`.
 
-```ts
-import { getEpisodesBySeason } from "@/helpers/databaseHelper";
-```
+Response shapes (JSON, camelCase to match the app):
 
-Therefore all exported episode functions must exist in the helper file actually selected by the platform:
+- **Movie**: `id, title, poster_path, release_date, vote_average, isWatched, watched_at, rewatch_count, is_favorite, genre_ids, genre_names`
+- **TvShow**: `id, name, poster_path, first_air_date, vote_average, is_favorite, genre_ids, genre_names`
+- **Episode**: `tv_id, season_number, episode_number, id (TMDB), name, overview, air_date, still_path, isWatched, watched_at, rewatch_count`
+- **SeasonProgress / TvProgress**: `seasonNumber, totalEpisodes, watchedEpisodes, percentage` / `totalEpisodes, watchedEpisodes, percentage`
 
-```text
-helpers/databaseHelper.web.ts
-helpers/databaseHelper.native.ts
-```
+## Import
 
-Otherwise runtime errors such as `upsertTvEpisodes is not a function` can occur.
-
-## Global context
-
-`context/GlobalContext.tsx` stores:
-
-```ts
-mediaObject: MediaItem | undefined
-filters: DiscoverMovieFilters | undefined
-```
-
-A card usually passes a summary object to the detail route. A summary TV object may not contain seasons. The detail API result must be preferred for TV details:
-
-```tsx
-<DetailsPage
-  mediaObject={data || mediaObject}
-  detailData={data}
-  contentType="tv"
-  ...
-/>
-```
-
-Do not skip the TV detail request merely because `mediaObject` already exists. The card object may only be a summary.
-
-## TMDB API
-
-Base URL:
-
-```text
-https://api.themoviedb.org/3
-```
-
-Environment variable:
-
-```env
-EXPO_PUBLIC_MOVIE_API_KEY=YOUR_KEY
-```
-
-Important endpoints:
-
-```text
-/discover/movie
-/search/movie
-/movie/{movie_id}?language=en-US
-/discover/tv
-/search/tv
-/tv/{tv_id}?language=en-US
-/{movie|tv}/{id}/similar?language=en-US&page=1
-/company/{company_id}
-/tv/{tv_id}/season/{season_number}?language=en-US
-```
-
-The season endpoint is called by `fetchTvSeasonEpisodes`. It requires a TMDB TV ID, not a TVDB or IMDb ID.
-
-Episode fields used by the app:
-
-```ts
-id
-episode_number
-season_number
-name
-overview
-air_date
-still_path
-vote_average
-vote_count
-```
-
-## Type rules
-
-Important types live in `interface/interfaces.d.ts`:
-
-```text
-BaseContent
-Movie
-Tv
-TvSeason
-TvEpisode
-WatchedTvEpisode
-MediaItem
-UnitedWithDb
-Company
-```
-
-Do not model details with `Movie & Tv`; that requires movie and TV-only fields at the same time and causes TypeScript errors. `MediaItem` should be a flexible detail type with optional movie/TV-specific fields.
-
-## TV tracking rules
-
-Movies may have a single watched state:
-
-```text
-movie → watched / not watched
-```
-
-TV shows must not have a single show-level Watched button. TV tracking is episode based:
-
-```text
-show
- └── seasons
-      └── episodes
-           ├── isWatched
-           ├── watched_at
-           └── rewatch_count
-```
-
-Movie cards/details may show Watched. TV cards/details should show watchlist membership and season/episode progress only.
-
-## Episode components
-
-`components/Episodes/EpisodeRow.tsx` renders one episode:
-
-- still preview image
-- watched check
-- episode title
-- air date
-- Not Released label
-- disabled interaction for unaired episodes
-
-Preview URL:
-
-```ts
-https://image.tmdb.org/t/p/w300${episode.still_path}
-```
-
-`components/Episodes/SeasonEpisodeList.tsx` renders season accordion rows and delegates individual rows to `EpisodeRow`.
-
-A collapsed season should still show:
-
-```text
-✓ Season 1
-8/8 aired watched
-Completed
-progress bar
-```
-
-The season circle is clickable. It must load the season episodes first if they are not loaded, then mark only aired episodes.
-
-## Aired episode rules
-
-TMDB generally provides `air_date`, not a reliable boolean `is_aired` field. Use `utils/episodeHelpers.ts`:
-
-```ts
-export const isEpisodeAired = (airDate: string | null): boolean => {
-  if (!airDate) return false;
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-  return new Date(`${airDate}T00:00:00`) <= today;
-};
-```
-
-Unaired episodes:
-
-- cannot be toggled
-- show `Not Released`
-- are skipped by Mark Season Watched
-- should not reduce aired progress
-
-## Responsive tab navigation
-
-`app/(tabs)/_layout.tsx` owns the bottom bar. Use equal-width flex items:
-
-```tsx
-tabBarItemStyle: {
-  flex: 1,
-  height: "100%",
-  margin: 0,
-  padding: 0,
-}
-```
-
-To make the selected tab fill its entire slot, use:
-
-```tsx
-tabBarIconStyle: {
-  width: "100%",
-  height: "100%",
-  margin: 0,
-  padding: 0,
-}
-```
-
-Avoid `width: "100%"` on every item, `margin: 10`, and fixed active widths such as `w-28`.
-
-## Theme
-
-Current neon-blue palette:
-
-```js
-colors: {
-  primary: "#00BFFF",
-  secondary: "#16324F",
-  accent: "#E6F7FF",
-  dark: {
-    100: "#102A43",
-    200: "#050B14",
-  },
-}
-```
-
-Also check `components/colors.tsx`, because the tab bar reads colors from that file rather than directly from Tailwind.
-
-## AI agent rules
-
-1. Read the target file before editing it.
-2. Check `.native.ts` and `.web.ts` resolution.
-3. Keep native and web helper exports consistent.
-4. Never overwrite user-owned watched fields during metadata refresh.
-5. Do not add show-level watched logic for TV.
-6. Distinguish TMDB, TVDB, and IMDb IDs.
-7. Do not mark future episodes watched.
-8. Use one shared `ensureSeasonEpisodes` flow instead of duplicating season fetch logic.
-9. Remove unused imports and state after refactoring.
-10. Test TypeScript before Expo bundling.
-
-## Test commands
-
-```powershell
-npx tsc --noEmit
-npx expo start -c
-```
-
-Test flow:
-
-1. Open a TV detail route.
-2. Confirm `/tv/{id}` is requested.
-3. Open a season and confirm `/tv/{id}/season/{season}` is requested.
-4. Toggle an aired episode.
-5. Confirm an unaired episode cannot be toggled.
-6. Press the collapsed season circle.
-7. Confirm the season fetches and marks aired episodes.
-8. Reload and confirm local state persists.
+**Status: dropped (2026-09).** The old development server held no data, so no export/import path was built)Skip. The schema is ready for it: TV Time JSON (and later CSV) import can be added as a backend endpoint that maps external records onto `movies` / `tv_shows` / `tv_episodes` using TMDB ids, respecting the metadata-only upsert rule (imported watched state would be written via the explicit state paths, never via upsert).

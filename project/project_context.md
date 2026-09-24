@@ -4,23 +4,38 @@
 
 MovLib is a React Native + Expo Router personal media tracking application for movies, TV shows, anime, and similar content. It started as a personal alternative to TV Time.
 
-TMDB is used for catalog data and metadata. User-owned data must remain local: watchlist membership, watched status, episode progress, watch timestamps, favorites, rewatch count, and future user notes/ratings.
+The app is a **thin client**: it talks only to its own backend (`MovLibBack`, Go + PostgreSQL, deployed via Docker Compose). The backend provides both the unified storage layer and a TMDB proxy — the app never calls `api.themoviedb.org` directly and never holds a TMDB keyikuha.
+
+User-owned data (watchlist membership, watched status, episode progress, watch timestamps, favorites, rewatch count, future notes/ratings) lives in PostgreSQL, one source of truth for every platform — replacing the old fragmented SQLite (native) / localStorage (web) storage.
 
 ## Main goals
 
 - Discover movies and TV shows
 - Search and filter TMDB content
 - Open movie and TV detail pages
-- Add/remove movies and shows from a local watchlist
+- Add/remove movies and shows from the watchlist (backend)
 - Track movie watched status
 - Track TV shows by season and episode
 - Mark aired episodes as watched/unwatched
 - Show season and overall TV progress
-- Import TV Time JSON data
-- Later support CSV as a complementary import source
-- Work on native and web platforms
+- Work on native and web platforms against one unified backend
+- ~~Import TV Time JSON data~~ — dropped: no data in the old dev server (2026-09). TV Time JSON / CSV import can be added later against the same schema.
+
+## Architecture
+
+```text
+Expo app (MovLib/)  ──HTTP──▶  Go backend (MovLibBack/)  ──▶  PostgreSQL
+                                  │
+                                  └──TMDB proxy──▶  api.themoviedb.org
+```
+
+- The app calls the backend for **everything**: storage CRUD, progress, and catalog data (`/tmdb/*`).
+- The backend injects the TMDB API key server-side; the app never sees it.
+- Poster/still images still load directly from `image.tmdb.org` (only the TMDB *API* is proxied).
 
 ## Technology
+
+Frontend:
 
 - React Native
 - Expo SDK 54
@@ -28,11 +43,16 @@ TMDB is used for catalog data and metadata. User-owned data must remain local: w
 - TypeScript
 - NativeWind / Tailwind
 - lucide-react-native
-- TMDB API
-- Native: expo-sqlite
-- Web: localStorage
+- ~~expo-sqlite (native) / localStorage (web)~~ — being replaced by the backend API client
 
-Known versions:
+Backend:
+
+- Go 1.26 (module `movlib-back`, plain module name — no `github.com/...` path)
+- PostgreSQL 17 (pgx/v5 driver)
+- Docker Compose (db + api services, named volume, healthcheck-gated startup)
+- Migrations embedded in the binary (`go:embed`), auto-applied at startup
+
+Known frontend versions:
 
 ```text
 expo 54.0.36
@@ -43,6 +63,7 @@ babel-preset-expo 54.0.12
 ## Project tree
 
 ```text
+MovLib/                        ← Expo app
 app/
 ├── _layout.tsx
 ├── globals.css
@@ -78,12 +99,12 @@ components/
 constants/Genre.ts
 context/GlobalContext.tsx
 
-db/
+db/                            ← legacy platform storage (being removed)
 ├── database.ts
 ├── database.native.ts
 └── database.web.ts
 
-helpers/
+helpers/                       ← legacy platform helpers (being replaced by API client)
 ├── GeneralHelpers.ts
 ├── databaseHelper.ts
 ├── databaseHelper.native.ts
@@ -94,10 +115,39 @@ hooks/
 └── useFetch.ts
 
 interface/interfaces.d.ts
-services/api.ts
+services/api.ts                ← TMDB client (will point at backend /tmdb/*)
 utils/
 ├── episodeHelpers.ts
 └── queryBuilder.ts
+```
+
+```text
+MovLibBack/                    ← Go backend
+├── Dockerfile                 (multi-stage: static binary, alpine runtime, non-root)
+├── docker-compose.yml         (db + api, healthcheck-gated, named volume)
+├── .env.example               (POSTGRES_PASSWORD, TMDB_API_KEY)
+├── .dockerignore
+├── go.mod                     (module movlib-back, pgx/v5)
+├── cmd/server/main.go         (config → connect → migrate → serve)
+├── internal/
+│   ├── config/config.go       (DATABASE_URL, HTTP_ADDR, TMDB_API_KEY)
+│   ├── migrate/migrate.go     (applies embedded migrations in order)
+│   ├── store/
+│   │   ├── store.go           (pgxpool setup)
+│   │   ├── movies.go
+│   │   ├── tv_shows.go
+│   │   └── tv_episodes.go
+│   ├── httpapi/
+│   │   ├── httpapi.go         (router + shared helpers)
+│   │   ├── movies.go
+│   │   ├── tvshows.go
+│   │   ├── episodes.go
+│   │   └── tmdbproxy.go       (GET /tmdb/{path...} allowlisted proxy)
+│   └── tmdb/client.go         (minimal TMDB v3 client, key injected server-side)
+└── migrations/
+    ├── 001_init.up.sql        (schema + genre seed)
+    ├── 002_soft_delete.up.sql (is_deleted on all tables)
+    └── embed.go
 ```
 
 ## Routes
@@ -113,40 +163,60 @@ app/tv/[id].tsx          → TV details
 
 `app/(tabs)/_layout.tsx` owns the bottom tab navigation. The screen content is implemented in the corresponding route files.
 
+## Backend
+
+### Run
+
+```powershell
+# one command starts everything (db + api); migrations auto-apply
+docker compose up -d --build
+
+# local dev without Docker (needs a Postgres on :5432)
+go run ./cmd/server
+```
+
+Environment (via `.env` next to `docker-compose.yml`):
+
+```env
+POSTGRES_PASSWORD=movlib
+TMDB_API_KEY=your_key_here        # blank disables /tmdb/* (503)
+```
+
+### API surface
+
+```text
+GET    /healthz
+
+GET    /tmdb/{path...}                    TMDB proxy (key injected server-side)
+
+PUT    /movies/{id}                       upsert metadata (never user state)
+GET    /movies                            list; ?watched=true&favorite=true
+GET    /movies/{id}
+PATCH  /movies/{id}/watched               body {"watched": bool}
+PATCH  /movies/{id}/favorite              body {"favorite": bool}
+DELETE /movies/{id}                       soft delete
+
+PUT    /tv/{id}                           upsert metadata
+GET    /tv                                list; ?favorite=true
+GET    /tv/{id}
+PATCH  /tv/{id}/favorite                  body {"favorite": bool}
+DELETE /tv/{id}                           soft delete
+
+PUT    /tv/{id}/season/{s}/episodes       batch upsert metadata (TMDB season shape)
+GET    /tv/{id}/season/{s}/episodes       list season episodes
+PATCH  /tv/{id}/season/{s}/episodes/{e}/watched   body {"watched": bool}
+PATCH  /tv/{id}/season/{s}/watched        body {"watched": bool} (aired-only when true)
+GET    /tv/{id}/season/{s}/progress
+GET    /tv/{id}/progress
+```
+
+Conventions: TMDB ids in the URL path; bodies carry metadata or an explicit state change; errors are `{"error": "..."}` (400/404/500); mutations return 204. Full schema and design rules: see `data_model_and_import.md`.
+
 ## Platform storage
 
-Native uses SQLite through:
+**Replaced by the backend.** All storage is PostgreSQL behind the Go API. The old `db/` (SQLite native / localStorage web) and `helpers/databaseHelper.*` layers are being removed; the app will call the backend endpoints above instead.
 
-```text
-db/database.native.ts
-```
-
-Web uses localStorage through:
-
-```text
-db/database.web.ts
-```
-
-There is also a platform-agnostic helper:
-
-```text
-helpers/databaseHelper.ts
-```
-
-Important: Expo/Metro may resolve this import to the platform-specific file:
-
-```ts
-import { getEpisodesBySeason } from "@/helpers/databaseHelper";
-```
-
-Therefore all exported episode functions must exist in the helper file actually selected by the platform:
-
-```text
-helpers/databaseHelper.web.ts
-helpers/databaseHelper.native.ts
-```
-
-Otherwise runtime errors such as `upsertTvEpisodes is not a function` can occur.
+Until the cutover is complete, the legacy note still applies: Expo/Metro may resolve `@/helpers/databaseHelper` to the platform-specific file, so all exported episode functions must exist in the helper file actually selected by the platform — otherwise runtime errors such as `upsertTvEpisodes is not a function` can occur.
 
 ## Global context
 
@@ -172,19 +242,17 @@ Do not skip the TV detail request merely because `mediaObject` already exists. T
 
 ## TMDB API
 
-Base URL:
+The app no longer calls TMDB directly. It calls the backend proxy:
 
 ```text
-https://api.themoviedb.org/3
+GET {BACKEND}/tmdb/{path}?{query}
 ```
 
-Environment variable:
+which forwards verbatim to `https://api.themoviedb.org/3/{path}?{query}` with the server-side key injected. Responses are identical in shape to TMDB's, so the frontend cutover is a base-URL swap, not a parser rewrite.
 
-```env
-EXPO_PUBLIC_MOVIE_API_KEY=YOUR_KEY
-```
+Allowlisted top-level paths: `search`, `movie`, `tv`, `genre`, `configuration`, `discover`, `trending`.
 
-Important endpoints:
+Endpoints the app uses (now via the proxy):
 
 ```text
 /discover/movie
@@ -267,7 +335,7 @@ Movie cards/details may show Watched. TV cards/details should show watchlist mem
 Preview URL:
 
 ```ts
-https://image.tmdb.org/t/p/w300${episode.still_path}
+https://lh7-rt.googleusercontent.com/docsz/AD_4nXd6nN12O9luHVxR0J-HLEft4MjsWcFsOyY52f9qprx2Pj0Xp-HZPC8X3bdVWpA-bfO-vg8d97oVgU661UKUkEetyaWafgXFBGT5X4PYgO9hGHBIT3lLY2dGwd0IltmRjvOit9uA3w?key=krxKnBk4WoUAG4IBGluaVA
 ```
 
 `components/Episodes/SeasonEpisodeList.tsx` renders season accordion rows and delegates individual rows to `EpisodeRow`.
@@ -302,6 +370,8 @@ Unaired episodes:
 - show `Not Released`
 - are skipped by Mark Season Watched
 - should not reduce aired progress
+
+The backend enforces the same rule structurally: `PATCH /tv/{id}/season/{s}/watched` with `watched: true` only touches episodes with `air_date <= CURRENT_DATE`.
 
 ## Responsive tab navigation
 
@@ -359,12 +429,16 @@ Also check `components/colors.tsx`, because the tab bar reads colors from that f
 8. Use one shared `ensureSeasonEpisodes` flow instead of duplicating season fetch logic.
 9. Remove unused imports and state after refactoring.
 10. Test TypeScript before Expo bundling.
+11. The app reaches TMDB only through the backend proxy; never reintroduce a direct TMDB call or an app-side API key.
+12. Backend upserts are metadata-only; user-owned columns are written only by explicit state endpoints.
 
 ## Test commands
 
 ```powershell
 npx tsc --noEmit
 npx expo start -c
+go build ./...
+go vet ./...
 ```
 
 Test flow:
@@ -376,4 +450,4 @@ Test flow:
 5. Confirm an unaired episode cannot be toggled.
 6. Press the collapsed season circle.
 7. Confirm the season fetches and marks aired episodes.
-8. Reload and confirm local state persists.
+8. Reload and confirm state persists (now via the backend).
