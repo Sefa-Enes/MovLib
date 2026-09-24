@@ -12,15 +12,21 @@ import {
   DiscoverTvFilters,
 } from "@/utils/queryBuilder";
 
+export const API_URL =
+  process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080";
+
+// TMDB catalog calls are proxied by the backend. The response shape is
+// identical to api.themoviedb.org/3, so services/api.ts only needs to
+// swap its base URL constant to this value — no parser changes.
+export const TMDB_BASE_URL = `${API_URL}/tmdb`;
 export const TMDB_CONFIG = {
-  BASE_URL: "https://api.themoviedb.org/3",
+  BASE_URL: TMDB_BASE_URL,
   API_KEY: process.env.EXPO_PUBLIC_MOVIE_API_KEY,
   headers: {
     accept: "application/json",
     Authorization: `Bearer ${process.env.EXPO_PUBLIC_MOVIE_API_KEY}`,
   },
 };
-
 export const fetchMovies = async ({
   query,
   filters,
