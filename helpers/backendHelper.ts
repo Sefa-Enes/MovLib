@@ -18,7 +18,6 @@
 //  - upsertTvEpisodes groups episodes by season_number and fires one PUT per
 //    season (rare that a caller mixes seasons, but safe).
 
-import { API_URL } from "@/services/api";
 import {
   Movie,
   SeasonProgress,
@@ -26,6 +25,7 @@ import {
   TvEpisode,
   WatchedTvEpisode,
 } from "@/interface/interfaces";
+import { API_URL } from "@/services/api";
 
 // ---------------------------------------------------------------------------
 // Shared fetch helpers
@@ -104,7 +104,15 @@ export const getAllMoviesWithGenres = async (
   onlyWatched: boolean = false,
 ): Promise<any[]> => {
   const qs = onlyWatched ? "?watched=true" : "";
-  return apiJSON<any[]>(`/movies${qs}`);
+  const rows = await apiJSON<any[]>(`/movies${qs}`);
+  // Normalize to the same shape as TMDB proxy-annotated items so ContentCard
+  // reads one consistent set of fields regardless of data source.
+  // Backend returns isWatched (camelCase); proxy returns is_watched (snake_case).
+  return rows.map((m) => ({
+    ...m,
+    in_library: true, // being returned by /movies = in library
+    is_watched: m.isWatched, // camelCase → snake_case
+  }));
 };
 
 // Alias kept for callers that used getMoviesWithGenres (same backend call).
@@ -117,7 +125,15 @@ export const getTvShowsWithGenres = async (
   // shows are returned. Call sites that depended on this filter need no
   // changes — they just receive the full list.
   _onlyWatched: boolean = false,
-): Promise<any[]> => apiJSON<any[]>("/tv");
+): Promise<any[]> => {
+  const rows = await apiJSON<any[]>("/tv");
+  // Normalize: in_library = true (being returned = in library).
+  // TV has no show-level watched state, so is_watched is not set.
+  return rows.map((m) => ({
+    ...m,
+    in_library: true,
+  }));
+};
 
 export const toggleMovieWatched = async (
   id: number,

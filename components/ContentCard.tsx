@@ -2,8 +2,6 @@ import { useMediaContext } from "@/context/GlobalContext";
 import {
   deleteMovie,
   deleteTvShow,
-  getMovieById,
-  getTvShowById,
   insertMovieWithGenres,
   insertTvWithGenres,
   toggleMovieWatched,
@@ -12,7 +10,7 @@ import {
 import { MediaItem, Movie, Tv } from "@/interface/interfaces";
 import { Href, router } from "expo-router";
 import { Check, Eye, Plus, Star } from "lucide-react-native";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
 type CardProps = MediaItem & {
@@ -23,9 +21,34 @@ type CardProps = MediaItem & {
   item: MediaItem;
 };
 
-interface UnitedWithDb extends MediaItem {
-  isWatched: boolean;
-}
+// ── TV watched-ratio fade ──────────────────────────────────────────────────
+// Library TV cards carry episode_count / watched_episode_count from the
+// backend (GET /tv). The poster is faded from the top down to a boundary set
+// by the watched ratio, so the clear region at the bottom is proportional to
+// progress:
+//   0/20  → fully faded
+//   10/20 → bottom half clear, top half faded
+//   5/20  → bottom 25% clear, top 75% faded
+// No gradient library is used — the fade is a stack of thin overlay strips
+// with increasing opacity (darkest at the top, transparent at the boundary).
+const TV_FADE_OPACITY = 0.8;
+
+const renderTvProgressFade = (ratio: number) => {
+  if (ratio >= 1) return null; // fully watched → no fade
+  const fadePct = (1 - ratio) * 100;
+  return (
+    <View
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: `${fadePct}%`,
+        backgroundColor: `rgba(0,0,0,${TV_FADE_OPACITY})`,
+      }}
+    />
+  );
+};
 
 const ContentCard = ({
   id,
@@ -44,28 +67,36 @@ const ContentCard = ({
   const { setMediaObject } = useMediaContext();
   const pathHead = contentType === "tv" ? "tv" : "movies";
 
-  const [fromDb, setFromDb] = useState<UnitedWithDb | null>(null);
-  const [inWatchlist, setInWatchlist] = useState(false);
-  const [isWatched, setIsWatched] = useState(false);
+  // Option 3: the TMDB proxy annotates every catalog item with in_library
+  // (movies + TV) and is_watched (movies only). The card reads them directly
+  // — the old per-card getMovieById/getTvShowById fetch (N+1) is gone.
+  //
+  // Library-sourced items (watchlist section, library page) arrive from
+  // GET /movies or GET /tv with DIFFERENT field names: the backend returns
+  // isWatched (camelCase, movies.go json tag) and is_favorite (tv_shows.go),
+  // and no in_library field at all — being in the response IS the membership
+  // proof. Both naming conventions are handled here so the card works
+  // regardless of which source produced the item:
+  //   - proxy item:      in_library / is_watched present
+  //   - backend item:    isWatched (movie) or is_favorite (tv) present
+  //   - normalized item: both present (backendHelper adds in_library/is_watched)
+  const [inWatchlist, setInWatchlist] = useState(
+    item.in_library ?? ("isWatched" in item || "is_favorite" in item),
+  );
+  const [isWatched, setIsWatched] = useState(
+    item.is_watched ?? (item as any).isWatched ?? false,
+  );
 
-  // 🔹 DB'den mevcut durumu al
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const data =
-          contentType === "movie"
-            ? await getMovieById(id)
-            : await getTvShowById(id);
-        setFromDb(data as UnitedWithDb);
-        setInWatchlist(!!data);
-        setIsWatched(!!data?.isWatched);
-      } catch (err) {
-        console.error("DB fetch error:", err);
-      }
-    };
-
-    fetchData();
-  }, [id, contentType]);
+  // TV watched ratio for the progress fade. Only library-sourced TV items
+  // carry episode_count / watched_episode_count (backend GET /tv); everything
+  // else (TMDB proxy items, movies) gets no fade.
+  const tvProgressRatio = useMemo(() => {
+    if (contentType !== "tv") return null;
+    const total = (item as any).episode_count;
+    const watched = (item as any).watched_episode_count;
+    if (!total || total <= 0) return null;
+    return Math.min(1, Math.max(0, (watched ?? 0) / total));
+  }, [contentType, item]);
 
   const dbFns = useMemo(() => {
     if (contentType === "movie") {
@@ -157,6 +188,17 @@ const ContentCard = ({
           resizeMode="cover"
           className="w-full h-60 rounded-lg"
         />
+
+        {/* TV watched-ratio fade: clear bottom ↔ faded top, proportional to
+            watched_episode_count / episode_count. */}
+        {contentType === "tv" && tvProgressRatio !== null && (
+          <View
+            pointerEvents="none"
+            className="absolute inset-0 rounded-lg overflow-hidden"
+          >
+            {renderTvProgressFade(tvProgressRatio)}
+          </View>
+        )}
 
         {contentType === "movie" && (
           <View className="absolute top-2 right-2 rounded-lg flex-row items-center">

@@ -1,5 +1,4 @@
 import { colors } from "@/components/colors";
-import SearchBox from "@/components/SearchBox";
 import SideScrollList from "@/components/SideScrollList";
 import { getAllMoviesWithGenres } from "@/helpers/databaseHelper";
 import { useChoseFetch } from "@/hooks/useChoseFetch";
@@ -24,7 +23,7 @@ export default function Index() {
       with_genres: 14,
       sort_by: "popularity.desc",
     }),
-    []
+    [],
   );
 
   const {
@@ -38,7 +37,7 @@ export default function Index() {
       with_genres: 27,
       sort_by: "popularity.desc",
     }),
-    []
+    [],
   );
   const {
     data: horrorMovieData,
@@ -51,7 +50,7 @@ export default function Index() {
       with_genres: 878,
       sort_by: "popularity.desc",
     }),
-    []
+    [],
   );
   const {
     data: scifiMovieData,
@@ -64,7 +63,7 @@ export default function Index() {
       with_genres: 16,
       sort_by: "popularity.desc",
     }),
-    []
+    [],
   );
 
   const {
@@ -79,8 +78,8 @@ export default function Index() {
         with_genres: 16,
         sort_by: "popularity.desc",
       }),
-      []
-    )
+      [],
+    ),
   );
 
   const {
@@ -128,7 +127,7 @@ export default function Index() {
           />
         }
       >
-        <Image
+        {/* <Image
           source={require("@/assets/images/logo.png")}
           className="mx-auto mt-20 mb-5"
           resizeMode="contain"
@@ -139,7 +138,7 @@ export default function Index() {
           onPress={() => router.push("/search")}
           placeholder="Search a movie or series"
           onChangeText={function (text: string): void {}}
-        />
+        /> */}
         <View className="mb-20">
           <View className="flex-1 mt-5">
             <>

@@ -11,6 +11,7 @@ import {
   DiscoverMovieFilters,
   DiscoverTvFilters,
 } from "@/utils/queryBuilder";
+import { PageResult } from "@/hooks/useInfiniteFetch";
 
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -24,7 +25,7 @@ export const TMDB_CONFIG = {
   API_KEY: process.env.EXPO_PUBLIC_MOVIE_API_KEY,
   headers: {
     accept: "application/json",
-    Authorization: `Bearer ${process.env.EXPO_PUBLIC_MOVIE_API_KEY}`,
+    // Authorization: `Bearer ${process.env.EXPO_PUBLIC_MOVIE_API_KEY}`,
   },
 };
 export const fetchMovies = async ({
@@ -80,6 +81,67 @@ export const fetchSeries = async ({
 
   const data = await response.json();
   return data.results;
+};
+
+// ── Paginated variants (infinite scroll) ───────────────────────────────────
+// Same routing as fetchMovies/fetchSeries, but they return the FULL TMDB
+// envelope { page, results, total_pages, total_results } instead of just
+// results, so the caller can append pages until total_pages is reached.
+// The backend proxy passes `page` through untouched.
+
+export const fetchMoviesPage = async ({
+  query,
+  filters,
+  page = 1,
+}: {
+  query: string;
+  filters?: DiscoverMovieFilters;
+  page?: number;
+}): Promise<PageResult<Movie>> => {
+  const queryParams = buildDiscoverMovieParams(filters);
+  const endpoint = query
+    ? `${TMDB_CONFIG.BASE_URL}/search/movie?query=${encodeURIComponent(
+        query,
+      )}&page=${page}`
+    : `${TMDB_CONFIG.BASE_URL}/discover/movie?${
+        queryParams || "sort_by=popularity.desc"
+      }&page=${page}`;
+
+  const response = await fetch(endpoint, {
+    method: "GET",
+    headers: TMDB_CONFIG.headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch movies: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+export const fetchSeriesPage = async ({
+  query,
+  page = 1,
+}: {
+  query: string;
+  page?: number;
+}): Promise<PageResult<Tv>> => {
+  const endpoint = query
+    ? `${TMDB_CONFIG.BASE_URL}/search/tv?query=${encodeURIComponent(
+        query,
+      )}&page=${page}`
+    : `${TMDB_CONFIG.BASE_URL}/discover/tv?sort_by=popularity.desc&page=${page}`;
+
+  const response = await fetch(endpoint, {
+    method: "GET",
+    headers: TMDB_CONFIG.headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch series: ${response.statusText}`);
+  }
+
+  return response.json();
 };
 
 export const fetchMovieDetails = async ({

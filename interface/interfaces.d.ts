@@ -10,6 +10,10 @@ export interface BaseContent {
   vote_average: number;
   vote_count: number;
 
+  // Backend proxy annotation (GET /tmdb/*): present on every catalog item.
+  // in_library — true when the item is saved in the user's library.
+  in_library?: boolean;
+
   // Detay endpointten gelen opsiyonel ek alanlar
   genres?: { id: number; name: string }[];
   production_companies?: {
@@ -38,6 +42,10 @@ export interface Movie extends BaseContent {
   release_date: string;
   video: boolean;
 
+  // Backend proxy annotation: watched state for movies (TV has no
+  // show-level watched state — see Tv).
+  is_watched?: boolean;
+
   // Detay endpoint ekleri
   budget?: number;
   revenue?: number;
@@ -56,6 +64,11 @@ export interface Tv extends BaseContent {
   original_name: string;
   origin_country: string[];
   first_air_date: string;
+
+  // Backend library response (GET /tv): episode progress counts, used by
+  // ContentCard to render the watched-ratio fade on library cards.
+  episode_count?: number;
+  watched_episode_count?: number;
 
   // Detay endpoint ekleri
   last_air_date?: string;
@@ -107,6 +120,10 @@ export interface Tv extends BaseContent {
 // Movie ve Tv tiplerini birleştiren MediaItem
 
 export interface MediaItem extends BaseContent {
+  // Backend proxy annotation: watched state for movies (TV has no
+  // show-level watched state).
+  is_watched?: boolean;
+
   // Film alanları
   title?: string;
   original_title?: string;
@@ -135,6 +152,11 @@ export interface MediaItem extends BaseContent {
   number_of_episodes?: number;
   type?: string;
   in_production?: boolean;
+
+  // Backend library response (GET /tv): episode progress counts, used by
+  // ContentCard to render the watched-ratio fade on library cards.
+  episode_count?: number;
+  watched_episode_count?: number;
 
   created_by?: {
     id: number;
