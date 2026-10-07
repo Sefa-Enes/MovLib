@@ -114,6 +114,20 @@ export const getAllMoviesWithGenres = async (
     is_watched: m.isWatched, // camelCase → snake_case
   }));
 };
+export const getAllSeriesWithGenres = async (
+  onlyWatched: boolean = false,
+): Promise<any[]> => {
+  const qs = onlyWatched ? "?watched=true" : "";
+  const rows = await apiJSON<any[]>(`/tv${qs}`);
+  // Normalize to the same shape as TMDB proxy-annotated items so ContentCard
+  // reads one consistent set of fields regardless of data source.
+  // Backend returns isWatched (camelCase); proxy returns is_watched (snake_case).
+  return rows.map((m) => ({
+    ...m,
+    in_library: true, // being returned by /movies = in library
+    is_watched: m.isWatched, // camelCase → snake_case
+  }));
+};
 
 // Alias kept for callers that used getMoviesWithGenres (same backend call).
 export const getMoviesWithGenres = (

@@ -1,6 +1,9 @@
 import { colors } from "@/components/colors";
 import SideScrollList from "@/components/SideScrollList";
-import { getAllMoviesWithGenres } from "@/helpers/databaseHelper";
+import {
+  getAllMoviesWithGenres,
+  getAllSeriesWithGenres,
+} from "@/helpers/databaseHelper";
 import { useChoseFetch } from "@/hooks/useChoseFetch";
 import useFetch from "@/hooks/useFetch";
 import { DiscoverMovieFilters } from "@/utils/queryBuilder";
@@ -88,12 +91,63 @@ export default function Index() {
     error: WlError,
     refetch: refetchWl,
   } = useFetch(() => getAllMoviesWithGenres(false));
+  const {
+    data: TvWlData,
+    loading: TvWlLoading,
+    error: TvWlError,
+    refetch: refetchTvWl,
+  } = useFetch(() => getAllSeriesWithGenres(false));
 
   const {
     data: tvData,
     loading: tvLoading,
     error: tvError,
   } = useChoseFetch("tv");
+  const {
+    data: animationTVData,
+    loading: animationTVLoading,
+    error: animationTVError,
+  } = useChoseFetch(
+    "tv",
+    undefined,
+    useMemo(
+      () => ({
+        with_genres: 16,
+        sort_by: "popularity.desc",
+      }),
+      [],
+    ),
+  );
+  const {
+    data: FantasyTVData,
+    loading: FantasyTVLoading,
+    error: FantasyTVError,
+  } = useChoseFetch(
+    "tv",
+    undefined,
+    useMemo(
+      () => ({
+        with_genres: 10765,
+        sort_by: "popularity.desc",
+      }),
+      [],
+    ),
+  );
+  const {
+    data: ComedyTVData,
+    loading: ComedyTVLoading,
+    error: ComedyTVError,
+  } = useChoseFetch(
+    "tv",
+    undefined,
+    useMemo(
+      () => ({
+        with_genres: 35,
+        sort_by: "popularity.desc",
+      }),
+      [],
+    ),
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -210,13 +264,57 @@ export default function Index() {
           </View>
           <View className="flex-1 mt-5">
             <Text className="text-lg text-accent font-bold mt-5">
-              Watchlist
+              Trending Animated Series
+            </Text>
+            <SideScrollList
+              contentType="tv"
+              data={animationTVData}
+              loading={animationTVLoading}
+              error={animationTVError}
+            />
+          </View>
+          <View className="flex-1 mt-5">
+            <Text className="text-lg text-accent font-bold mt-5">
+              Trending Fantasy & Sci-Fi Series
+            </Text>
+            <SideScrollList
+              contentType="tv"
+              data={FantasyTVData}
+              loading={FantasyTVLoading}
+              error={FantasyTVError}
+            />
+          </View>
+          <View className="flex-1 mt-5">
+            <Text className="text-lg text-accent font-bold mt-5">
+              Trending Comedy Series
+            </Text>
+            <SideScrollList
+              contentType="tv"
+              data={ComedyTVData}
+              loading={ComedyTVLoading}
+              error={ComedyTVError}
+            />
+          </View>
+          <View className="flex-1 mt-5">
+            <Text className="text-lg text-accent font-bold mt-5">
+              Movie Watchlist
             </Text>
             <SideScrollList
               contentType="movie"
               data={WlData}
               loading={WlLoading}
               error={WlError}
+            />
+          </View>
+          <View className="flex-1 mt-5">
+            <Text className="text-lg text-accent font-bold mt-5">
+              Series Watchlist
+            </Text>
+            <SideScrollList
+              contentType="movie"
+              data={TvWlData}
+              loading={TvWlLoading}
+              error={TvWlError}
             />
           </View>
         </View>

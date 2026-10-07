@@ -1,20 +1,23 @@
-// useContent.ts
+// useChoseFetch.ts
 import { fetchMovies, fetchSeries } from "@/services/api";
-import { DiscoverMovieFilters } from "@/utils/queryBuilder";
+import { DiscoverMovieFilters, DiscoverTvFilters } from "@/utils/queryBuilder";
 import { useCallback, useEffect } from "react";
 import useFetch from "./useFetch";
 
 export const useChoseFetch = (
   type: "movie" | "tv",
   query: string = "",
-  filters: DiscoverMovieFilters | undefined = undefined
+  filters: DiscoverMovieFilters | DiscoverTvFilters | undefined = undefined,
 ) => {
   const fetchFn = useCallback(async () => {
     return type === "movie"
-      ? await fetchMovies({ query, filters })
+      ? await fetchMovies({
+          query,
+          filters: filters as DiscoverMovieFilters | undefined,
+        })
       : await fetchSeries({
           query,
-          // ,filters
+          filters: filters as DiscoverTvFilters | undefined,
         });
   }, [type, query, filters]);
 

@@ -1,3 +1,4 @@
+import { PageResult } from "@/hooks/useInfiniteFetch";
 import {
   Company,
   MediaItem,
@@ -11,7 +12,6 @@ import {
   DiscoverMovieFilters,
   DiscoverTvFilters,
 } from "@/utils/queryBuilder";
-import { PageResult } from "@/hooks/useInfiniteFetch";
 
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080";
