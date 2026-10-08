@@ -19,6 +19,7 @@ type CardProps = MediaItem & {
   isGrid?: boolean;
   routes?: string;
   item: MediaItem;
+  showButton?: boolean;
 };
 
 // ── TV watched-ratio fade ──────────────────────────────────────────────────
@@ -63,6 +64,7 @@ const ContentCard = ({
   showLabel = false,
   isGrid = false,
   item,
+  showButton = true,
 }: CardProps) => {
   const { setMediaObject } = useMediaContext();
   const pathHead = contentType === "tv" ? "tv" : "movies";

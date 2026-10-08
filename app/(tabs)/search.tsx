@@ -8,11 +8,8 @@ import { useMediaContext } from "@/context/GlobalContext";
 import useFetch from "@/hooks/useFetch";
 import useInfiniteFetch, { PageResult } from "@/hooks/useInfiniteFetch";
 import { MediaItem } from "@/interface/interfaces";
-import {
-  fetchCompany,
-  fetchMoviesPage,
-  fetchSeriesPage,
-} from "@/services/api";
+import { fetchCompany, fetchMoviesPage, fetchSeriesPage } from "@/services/api";
+import { DiscoverMovieFilters, DiscoverTvFilters } from "@/utils/queryBuilder";
 import { useRouter } from "expo-router";
 import { X } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
@@ -54,7 +51,11 @@ const search = () => {
       if (contentType === "movie") {
         return fetchMoviesPage({ query: debouncedQuery, filters, page });
       }
-      return fetchSeriesPage({ query: debouncedQuery, page });
+      return fetchSeriesPage({
+        query: debouncedQuery,
+        filters: filters as DiscoverTvFilters | undefined,
+        page,
+      });
     },
     [contentType, debouncedQuery, filters],
   );
@@ -83,7 +84,7 @@ const search = () => {
     refetch: refetchCompany,
   } = useFetch(
     () => fetchCompany({ id: Number(filters?.with_companies) }),
-    false
+    false,
   );
   useEffect(() => {
     if (filters?.with_companies && !companyData) {
@@ -124,7 +125,17 @@ const search = () => {
               />
 
               {/* 🔹 Filter Button */}
-              <FilterModal setFilters={setFilters} />
+              <FilterModal
+                contentType={contentType}
+                filters={filters}
+                // Adapter: modal produces a movie|tv union; the context setter
+                // is movie-typed. The cast stores TV-shaped objects verbatim
+                // (runtime-safe) and the TV fetch reads them back via its own
+                // cast. If GlobalContext is widened to the union, drop the cast.
+                setFilters={(f) =>
+                  setFilters(f as DiscoverMovieFilters | undefined)
+                }
+              />
             </View>
 
             <SegmentedControl
@@ -172,7 +183,7 @@ const search = () => {
                         getMovieGenresAsString(
                           Array.isArray(filters.with_genres)
                             ? filters.with_genres
-                            : [filters.with_genres].filter(Boolean)
+                            : [filters.with_genres].filter(Boolean),
                         ) +
                         " Genre"}
                     </Text>

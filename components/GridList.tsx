@@ -17,11 +17,13 @@ const GridList = ({
   data,
   loading,
   error,
+  showButton = true,
 }: {
   contentType: "movie" | "tv";
   data: any;
   loading: boolean;
   error: Error | null;
+  showButton?: boolean;
 }) => {
   if (loading) {
     return (

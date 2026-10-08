@@ -1,3 +1,5 @@
+//api.ts
+import { TmdbGenre } from "@/constants/Genre";
 import { PageResult } from "@/hooks/useInfiniteFetch";
 import {
   Company,
@@ -15,6 +17,18 @@ import {
 
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080";
+
+// Genre catalog is seeded in the database; this endpoint reads it back so the
+// app never hardcodes the TMDB genre lists.
+export const fetchGenres = async (): Promise<TmdbGenre[]> => {
+  const endpoint = `${API_URL}/genres`;
+  const response = await fetch(endpoint, { method: "GET" });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch genres: ${response.statusText}`);
+  }
+  const data = await response.json();
+  return data;
+};
 
 // TMDB catalog calls are proxied by the backend. The response shape is
 // identical to api.themoviedb.org/3, so services/api.ts only needs to
@@ -121,16 +135,21 @@ export const fetchMoviesPage = async ({
 
 export const fetchSeriesPage = async ({
   query,
+  filters,
   page = 1,
 }: {
   query: string;
+  filters?: DiscoverTvFilters;
   page?: number;
 }): Promise<PageResult<Tv>> => {
+  const queryParams = buildDiscoverTvParams(filters);
   const endpoint = query
     ? `${TMDB_CONFIG.BASE_URL}/search/tv?query=${encodeURIComponent(
         query,
       )}&page=${page}`
-    : `${TMDB_CONFIG.BASE_URL}/discover/tv?sort_by=popularity.desc&page=${page}`;
+    : `${TMDB_CONFIG.BASE_URL}/discover/tv?${
+        queryParams || "sort_by=popularity.desc"
+      }&page=${page}`;
 
   const response = await fetch(endpoint, {
     method: "GET",

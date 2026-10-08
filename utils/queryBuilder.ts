@@ -1,4 +1,3 @@
-// utils/tmdbQueryBuilder.ts
 export interface SortTv {
   sort_by?:
     | "popularity.asc"
@@ -52,6 +51,14 @@ export interface DiscoverTvFilters extends SortTv {
   vote_count_lte?: number;
   watch_region?: string;
 
+  // Certification (age rating). discover/tv supports these — certification
+  // codes like TV-PG/TV-MA, optionally a range via certification_gte/lte,
+  // scoped by certification_country (default US).
+  certification?: string;
+  certification_gte?: string;
+  certification_lte?: string;
+  certification_country?: string;
+
   // Relationship filters
   with_companies?: string | string[];
   with_genres?: string | string[] | number | number[];
@@ -77,23 +84,9 @@ export interface DiscoverTvFilters extends SortTv {
   without_watch_providers?: string | string[];
 }
 
-export interface Sort {
-  sort_by?:
-    | "popularity.asc"
-    | "popularity.desc"
-    | "revenue.asc"
-    | "revenue.desc"
-    | "primary_release_date.asc"
-    | "primary_release_date.desc"
-    | "original_title.asc"
-    | "original_title.desc"
-    | "title.asc"
-    | "title.desc"
-    | "vote_average.asc"
-    | "vote_average.desc"
-    | "vote_count.asc"
-    | "vote_count.desc";
-}
+/**
+ * Movie Discovery Filters — https://developer.themoviedb.org/reference/discover-movie
+ */
 export interface DiscoverMovieFilters extends Sort {
   certification?: string;
   certification_gte?: string;
@@ -137,7 +130,7 @@ export interface DiscoverMovieFilters extends Sort {
  * Converts DiscoverMovieFilters object into valid TMDB query params
  */
 export const buildDiscoverMovieParams = (
-  filters: DiscoverMovieFilters = {}
+  filters: DiscoverMovieFilters = {},
 ) => {
   const params = new URLSearchParams();
 
