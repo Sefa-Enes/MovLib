@@ -102,8 +102,13 @@ export const insertTvWithGenres = async (
 
 export const getAllMoviesWithGenres = async (
   onlyWatched: boolean = false,
+  onlyNotWatched: boolean = false,
 ): Promise<any[]> => {
-  const qs = onlyWatched ? "?watched=true" : "";
+  const qs = onlyWatched
+    ? "?watched=true"
+    : onlyNotWatched
+      ? "?watched=false"
+      : "";
   const rows = await apiJSON<any[]>(`/movies${qs}`);
   // Normalize to the same shape as TMDB proxy-annotated items so ContentCard
   // reads one consistent set of fields regardless of data source.

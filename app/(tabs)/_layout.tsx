@@ -1,6 +1,6 @@
 import { FloatingTabBar } from "@/components/ui/FloatingTabBar";
 import { Tabs } from "expo-router";
-import { Home, Library, Search, User } from "lucide-react-native";
+import { Home, Library, Rocket, Search, User } from "lucide-react-native";
 
 export default function TabsLayout() {
   return (
@@ -9,10 +9,17 @@ export default function TabsLayout() {
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
           title: "Home",
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Explore",
+          tabBarIcon: ({ color, size }) => <Rocket color={color} size={size} />,
         }}
       />
       <Tabs.Screen

@@ -1,5 +1,5 @@
 import { colors } from "@/components/colors";
-import SideScrollList from "@/components/SideScrollList";
+import GridList from "@/components/GridList";
 import {
   getAllMoviesWithGenres,
   getAllSeriesWithGenres,
@@ -12,7 +12,7 @@ import { useCallback, useMemo, useState } from "react";
 import { RefreshControl, Text } from "react-native";
 
 import { Image, ScrollView, View } from "react-native";
-export default function Index() {
+export default function Home() {
   const router = useRouter();
 
   const {
@@ -195,123 +195,11 @@ export default function Index() {
         /> */}
         <View className="mb-20">
           <View className="flex-1 mt-5">
-            <>
-              <Text className="text-lg text-accent font-bold mt-5 ">
-                Trending Movies
-              </Text>
-              <SideScrollList
-                contentType="movie"
-                data={movieData}
-                loading={movieLoading}
-                error={movieError}
-              />
-            </>
-          </View>
-          <View className="flex-1 mt-5">
-            <Text className="text-lg text-accent font-bold mt-5">
-              Trending Series
-            </Text>
-            <SideScrollList
-              contentType="tv"
-              data={tvData}
-              loading={tvLoading}
-              error={tvError}
-            />
-          </View>
-          <View className="flex-1 mt-5">
-            <Text className="text-lg text-accent font-bold mt-5">
-              Trending Horror Movies
-            </Text>
-            <SideScrollList
-              contentType="movie"
-              data={horrorMovieData}
-              loading={horrorMovieLoading}
-              error={horrorMovieError}
-            />
-          </View>
-          <View className="flex-1 mt-5">
-            <Text className="text-lg text-accent font-bold mt-5">
-              Trendling Sci-Fi Movies
-            </Text>
-            <SideScrollList
-              contentType="movie"
-              data={scifiMovieData}
-              loading={scifiMovieLoading}
-              error={scifiMovieError}
-            />
-          </View>
-          <View className="flex-1 mt-5">
-            <Text className="text-lg text-accent font-bold mt-5">
-              Trending Fantasy Movies
-            </Text>
-            <SideScrollList
-              contentType="movie"
-              data={fantasyMovieData}
-              loading={fantasyMovieLoading}
-              error={fantasyMovieError}
-            />
-          </View>
-          <View className="flex-1 mt-5">
-            <Text className="text-lg text-accent font-bold mt-5">
-              Trending Animation Movies
-            </Text>
-            <SideScrollList
-              contentType="movie"
-              data={animationMovieData}
-              loading={animationMovieLoading}
-              error={animationMovieError}
-            />
-          </View>
-          <View className="flex-1 mt-5">
-            <Text className="text-lg text-accent font-bold mt-5">
-              Trending Animated Series
-            </Text>
-            <SideScrollList
-              contentType="tv"
-              data={animationTVData}
-              loading={animationTVLoading}
-              error={animationTVError}
-            />
-          </View>
-          <View className="flex-1 mt-5">
-            <Text className="text-lg text-accent font-bold mt-5">
-              Trending Fantasy & Sci-Fi Series
-            </Text>
-            <SideScrollList
-              contentType="tv"
-              data={FantasyTVData}
-              loading={FantasyTVLoading}
-              error={FantasyTVError}
-            />
-          </View>
-          <View className="flex-1 mt-5">
-            <Text className="text-lg text-accent font-bold mt-5">
-              Trending Comedy Series
-            </Text>
-            <SideScrollList
-              contentType="tv"
-              data={ComedyTVData}
-              loading={ComedyTVLoading}
-              error={ComedyTVError}
-            />
-          </View>
-          <View className="flex-1 mt-5">
-            <Text className="text-lg text-accent font-bold mt-5">
-              Movie Watchlist
-            </Text>
-            <SideScrollList
-              contentType="movie"
-              data={WlData}
-              loading={WlLoading}
-              error={WlError}
-            />
-          </View>
-          <View className="flex-1 mt-5">
             <Text className="text-lg text-accent font-bold mt-5">
               Series Watchlist
             </Text>
-            <SideScrollList
-              contentType="movie"
+            <GridList
+              contentType="tv"
               data={TvWlData}
               loading={TvWlLoading}
               error={TvWlError}
