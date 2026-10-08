@@ -30,7 +30,7 @@
 export const colors = {
   primary: "#00D9FF", // neon cyan-mavi (ana vurgu)
   primaryGlow: "#00D9FF80", // glow/shadow için alpha versiyonu
-  secondary: "#0A84FF", // daha doygun mavi (buton/link)
+  secondary: "#0466c9", // daha doygun mavi (buton/link)
   accent: "#d3f1f2",
 
   dark: {

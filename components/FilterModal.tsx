@@ -52,6 +52,7 @@ interface Draft {
   certification: string | undefined; // age rating (country US)
   yearGte: number; // movie: primary_release_date.gte / tv: first_air_date.gte
   yearLte: number;
+  includeAdult: boolean; // include_adult: true on search endpoints only
   genreStates: Record<number, GenreState>;
 }
 
@@ -62,6 +63,7 @@ const emptyDraft = (): Draft => ({
   certification: undefined,
   yearGte: YEAR_MIN,
   yearLte: YEAR_MAX,
+  includeAdult: false,
   genreStates: {},
 });
 
@@ -102,8 +104,9 @@ export const FilterModal = ({ contentType, filters, setFilters }: Props) => {
       voteGte: f?.vote_average_gte ?? VOTE_MIN,
       voteLte: f?.vote_average_lte ?? VOTE_MAX,
       certification: f?.certification ?? undefined,
-      yearGte: Number((f as any)?.[`${yearKey}_gte`]?.slice(0, 4)) || YEAR_MIN,
-      yearLte: Number((f as any)?.[`${yearKey}_lte`]?.slice(0, 4)) || YEAR_MAX,
+      yearGte: Number((f as any)?.[`${yearKey}.gte`]?.slice(0, 4)) || YEAR_MIN,
+      yearLte: Number((f as any)?.[`${yearKey}.lte`]?.slice(0, 4)) || YEAR_MAX,
+      includeAdult: f?.include_adult ?? false,
       genreStates: Object.fromEntries([
         ...toNumArr(f?.with_genres).map((id): [number, GenreState] => [
           id,
@@ -144,12 +147,13 @@ export const FilterModal = ({ contentType, filters, setFilters }: Props) => {
       .map(([id]) => Number(id));
 
     const out: {
-      [key: string]: string | number | number[] | undefined;
+      [key: string]: string | number | number[] | boolean | undefined;
       sort_by?: string;
       vote_average_gte?: number;
       vote_average_lte?: number;
       certification?: string;
       certification_country?: string;
+      include_adult?: boolean;
       with_genres?: number[];
       without_genres?: number[];
       primary_release_date_gte?: string;
@@ -165,6 +169,7 @@ export const FilterModal = ({ contentType, filters, setFilters }: Props) => {
       out.certification = draft.certification;
       out.certification_country = CERTIFICATION_COUNTRY;
     }
+    if (draft.includeAdult) out.include_adult = true;
     if (inc.length) out.with_genres = inc;
     if (exc.length) out.without_genres = exc;
     if (draft.yearGte > YEAR_MIN)
@@ -356,6 +361,27 @@ export const FilterModal = ({ contentType, filters, setFilters }: Props) => {
               and TV-MA (TV) cover adult content.
             </Text>
 
+            {/* Adult content toggle */}
+            <Text className="text-white text-sm font-semibold mt-6 mb-2">
+              Adult content
+            </Text>
+            <View className="flex-row flex-wrap gap-2">
+              <TouchableOpacity
+                onPress={() =>
+                  setDraft((d) => ({ ...d, includeAdult: !d.includeAdult }))
+                }
+                className={`px-3 py-2 rounded-full border ${
+                  draft.includeAdult
+                    ? "bg-primary border-primary"
+                    : "bg-dark-200 border-dark-100"
+                }`}
+              >
+                <Text className="text-white text-xs font-semibold">
+                  Include adult content
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             {/* Genres — 3-state */}
             <Text className="text-white text-sm font-semibold mt-6 mb-1">
               Categories
@@ -363,18 +389,6 @@ export const FilterModal = ({ contentType, filters, setFilters }: Props) => {
             <Text className="text-gray-400 text-xs mb-2">
               Tap: include (+) → exclude (−) → clear
             </Text>
-            {/* {genres === undefined ? (
-              <View className="flex-row items-center gap-2 py-2">
-                <ActivityIndicator size="small" color={colors.accent} />
-                <Text className="text-gray-400 text-xs">
-                  Loading categories…
-                </Text>
-              </View>
-            ) : (
-              <View className="flex-row flex-wrap gap-2 pb-1">
-                {genres.map((g) => genreChip(g.id, g.name))}
-              </View>
-            )} */}
             {genresLoading ? (
               <View className="flex-row items-center gap-2 py-2">
                 <ActivityIndicator size="small" color={colors.accent} />
@@ -395,6 +409,7 @@ export const FilterModal = ({ contentType, filters, setFilters }: Props) => {
                 {genres.map((g) => genreChip(g.id, g.name))}
               </View>
             )}
+
             {/* Year range */}
             <Text className="text-white text-sm font-semibold mt-6 mb-1">
               Year range

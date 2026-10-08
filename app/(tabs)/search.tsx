@@ -31,8 +31,28 @@ const search = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [contentType, setContentType] = useState<"movie" | "tv">("movie");
 
-  const { filters, setFilters } = useMediaContext();
+  const { filters: movieFilters, setFilters: setMovieFilters } =
+    useMediaContext();
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+
+  // Active filters are kept per content type — movie in the shared context,
+  // TV in local state. The effective set always matches contentType, so the
+  // movie bucket never leaks into the TV discover query and vice versa.
+  // Switching movie → tv starts TV with an empty set; switching back
+  // restores the stored movie filters.
+  const [tvFilters, setTvFilters] = useState<DiscoverTvFilters | undefined>(
+    undefined,
+  );
+  const filters: DiscoverMovieFilters | DiscoverTvFilters | undefined =
+    contentType === "movie" ? movieFilters : tvFilters;
+
+  const clearActiveFilters = () => {
+    if (contentType === "movie") {
+      setMovieFilters(undefined);
+    } else {
+      setTvFilters(undefined);
+    }
+  };
 
   // Debounce the query so each keystroke doesn't fire a page-1 fetch
   // (same 500ms behavior the old useChoseFetch had).
@@ -49,7 +69,11 @@ const search = () => {
   const fetchPage = useCallback(
     async (page: number): Promise<PageResult<MediaItem>> => {
       if (contentType === "movie") {
-        return fetchMoviesPage({ query: debouncedQuery, filters, page });
+        return fetchMoviesPage({
+          query: debouncedQuery,
+          filters: filters as DiscoverMovieFilters | undefined,
+          page,
+        });
       }
       return fetchSeriesPage({
         query: debouncedQuery,
@@ -90,7 +114,7 @@ const search = () => {
     if (filters?.with_companies && !companyData) {
       refetchCompany();
     }
-  }, [filters?.with_companies]); // Number() kullanmadan, sadece ilgili state'leri ekle
+  }, [filters?.with_companies, contentType]); // per-type: refetch when the active bucket changes
 
   return (
     <View className="flex-1 bg-dark-200">
@@ -128,13 +152,15 @@ const search = () => {
               <FilterModal
                 contentType={contentType}
                 filters={filters}
-                // Adapter: modal produces a movie|tv union; the context setter
-                // is movie-typed. The cast stores TV-shaped objects verbatim
-                // (runtime-safe) and the TV fetch reads them back via its own
-                // cast. If GlobalContext is widened to the union, drop the cast.
-                setFilters={(f) =>
-                  setFilters(f as DiscoverMovieFilters | undefined)
-                }
+                // Route the applied set into the bucket for the active
+                // content type — never into the other type's bucket.
+                setFilters={(f) => {
+                  if (contentType === "movie") {
+                    setMovieFilters(f as DiscoverMovieFilters | undefined);
+                  } else {
+                    setTvFilters(f as DiscoverTvFilters | undefined);
+                  }
+                }}
               />
             </View>
 
@@ -181,15 +207,16 @@ const search = () => {
                     <Text className="text-accent font-bold">
                       {" " +
                         getMovieGenresAsString(
-                          Array.isArray(filters.with_genres)
+                          (Array.isArray(filters.with_genres)
                             ? filters.with_genres
-                            : [filters.with_genres].filter(Boolean),
+                            : [filters.with_genres]
+                          ).map(Number),
                         ) +
                         " Genre"}
                     </Text>
                   </Text>
                   <TouchableOpacity
-                    onPress={() => setFilters(undefined)}
+                    onPress={clearActiveFilters}
                     className="flex-row items-center justify-center gap-x-2 h-8 w-8 rounded-full"
                   >
                     <X className="text-accent font-bold" size={24} />
@@ -209,7 +236,7 @@ const search = () => {
                     </Text>
                   </Text>
                   <TouchableOpacity
-                    onPress={() => setFilters(undefined)}
+                    onPress={clearActiveFilters}
                     className="flex-row items-center justify-center gap-x-2 h-8 w-8 rounded-full"
                   >
                     <X className="text-accent font-bold" size={24} />
