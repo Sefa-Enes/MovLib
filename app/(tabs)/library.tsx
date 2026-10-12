@@ -1,10 +1,17 @@
 import { colors } from "@/components/colors";
 import GridList from "@/components/GridList";
+import { LibraryFilterModal } from "@/components/LibraryFilterModal";
 import SegmentedControl from "@/components/ui/SegmentedButton";
 import {
   getAllMoviesWithGenres,
   getTvShowsWithGenres,
 } from "@/helpers/databaseHelper";
+import {
+  LibraryFilters,
+  applyLibraryFilters,
+  defaultLibraryFilters,
+} from "@/helpers/libraryFilter";
+import { LibraryItem } from "@/helpers/librarySort";
 import useFetch from "@/hooks/useFetch";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -21,7 +28,9 @@ export default function LibraryScreen() {
       ? { getAll: getAllMoviesWithGenres }
       : { getAll: getTvShowsWithGenres };
   }, [contentType]);
-
+  const [filtersByType, setFiltersByType] = useState<
+    Record<"movie" | "tv", LibraryFilters>
+  >({ movie: defaultLibraryFilters(), tv: defaultLibraryFilters() });
   const {
     data: WlData,
     loading: WlLoading,
@@ -45,7 +54,16 @@ export default function LibraryScreen() {
   useEffect(() => {
     refetchWl();
   }, [contentType]);
-
+  const visibleData = useMemo(
+    () =>
+      WlData
+        ? applyLibraryFilters(
+            WlData as LibraryItem[],
+            filtersByType[contentType],
+          )
+        : WlData,
+    [WlData, filtersByType, contentType],
+  );
   return (
     <View className="flex-1 bg-dark-200">
       <Image
@@ -78,11 +96,20 @@ export default function LibraryScreen() {
         />
 
         <View className="mb-20 mt-5">
-          <Text className="text-lg text-accent font-bold mb-2">Watchlist</Text>
+          <View className="flex-row items-center justify-between mb-2">
+            <Text className="text-lg text-accent font-bold">Watchlist</Text>
+            <LibraryFilterModal
+              contentType={contentType}
+              filters={filtersByType[contentType]}
+              setFilters={(f) =>
+                setFiltersByType((prev) => ({ ...prev, [contentType]: f }))
+              }
+            />
+          </View>
 
           <GridList
             contentType={contentType}
-            data={WlData}
+            data={visibleData}
             loading={WlLoading}
             error={WlError}
           />
