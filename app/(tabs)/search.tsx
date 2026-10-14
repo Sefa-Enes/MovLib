@@ -5,14 +5,19 @@ import SearchBox from "@/components/SearchBox";
 import SegmentedControl from "@/components/ui/SegmentedButton";
 import { getMovieGenresAsString } from "@/constants/Genre";
 import { useMediaContext } from "@/context/GlobalContext";
-import { useChoseFetch } from "@/hooks/useChoseFetch";
 import useFetch from "@/hooks/useFetch";
-import { fetchCompany } from "@/services/api";
+import useInfiniteFetch, { PageResult } from "@/hooks/useInfiniteFetch";
+import { MediaItem } from "@/interface/interfaces";
+import { fetchCompany, fetchMoviesPage, fetchSeriesPage } from "@/services/api";
+import { DiscoverMovieFilters, DiscoverTvFilters } from "@/utils/queryBuilder";
 import { useRouter } from "expo-router";
 import { X } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,13 +31,75 @@ const search = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [contentType, setContentType] = useState<"movie" | "tv">("movie");
 
-  const { filters, setFilters } = useMediaContext();
-  const { data, loading, error } = useChoseFetch(
-    contentType,
-    searchQuery,
-    filters
-  );
+  const { filters: movieFilters, setFilters: setMovieFilters } =
+    useMediaContext();
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+
+  // Active filters are kept per content type — movie in the shared context,
+  // TV in local state. The effective set always matches contentType, so the
+  // movie bucket never leaks into the TV discover query and vice versa.
+  // Switching movie → tv starts TV with an empty set; switching back
+  // restores the stored movie filters.
+  const [tvFilters, setTvFilters] = useState<DiscoverTvFilters | undefined>(
+    undefined,
+  );
+  const filters: DiscoverMovieFilters | DiscoverTvFilters | undefined =
+    contentType === "movie" ? movieFilters : tvFilters;
+
+  const clearActiveFilters = () => {
+    if (contentType === "movie") {
+      setMovieFilters(undefined);
+    } else {
+      setTvFilters(undefined);
+    }
+  };
+
+  // Debounce the query so each keystroke doesn't fire a page-1 fetch
+  // (same 500ms behavior the old useChoseFetch had).
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchQuery), 500);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  // ── Infinite scroll ──────────────────────────────────────────────────────
+  // Fetches one TMDB page at a time through the backend proxy. The proxy
+  // passes `page` through untouched and returns the standard TMDB envelope
+  // { page, results, total_pages, total_results }.
+  const fetchPage = useCallback(
+    async (page: number): Promise<PageResult<MediaItem>> => {
+      if (contentType === "movie") {
+        return fetchMoviesPage({
+          query: debouncedQuery,
+          filters: filters as DiscoverMovieFilters | undefined,
+          page,
+        });
+      }
+      return fetchSeriesPage({
+        query: debouncedQuery,
+        filters: filters as DiscoverTvFilters | undefined,
+        page,
+      });
+    },
+    [contentType, debouncedQuery, filters],
+  );
+
+  const { data, loading, loadingMore, error, hasMore, loadMore } =
+    useInfiniteFetch<MediaItem>(fetchPage, [
+      contentType,
+      debouncedQuery,
+      JSON.stringify(filters),
+    ]);
+
+  // Fire loadMore when the user scrolls within ~300px of the bottom.
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+    const nearBottom =
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - 300;
+    if (nearBottom && hasMore && !loadingMore && !loading) {
+      loadMore();
+    }
+  };
 
   const {
     data: companyData,
@@ -41,13 +108,13 @@ const search = () => {
     refetch: refetchCompany,
   } = useFetch(
     () => fetchCompany({ id: Number(filters?.with_companies) }),
-    false
+    false,
   );
   useEffect(() => {
     if (filters?.with_companies && !companyData) {
       refetchCompany();
     }
-  }, [filters?.with_companies]); // Number() kullanmadan, sadece ilgili state'leri ekle
+  }, [filters?.with_companies, contentType]); // per-type: refetch when the active bucket changes
 
   return (
     <View className="flex-1 bg-dark-200">
@@ -60,6 +127,8 @@ const search = () => {
         className="flex-1 px-5 w-full"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ minHeight: "100%", paddingBottom: 10 }}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       >
         <Image
           source={require("@/assets/images/logo.png")}
@@ -80,7 +149,19 @@ const search = () => {
               />
 
               {/* 🔹 Filter Button */}
-              <FilterModal setFilters={setFilters} />
+              <FilterModal
+                contentType={contentType}
+                filters={filters}
+                // Route the applied set into the bucket for the active
+                // content type — never into the other type's bucket.
+                setFilters={(f) => {
+                  if (contentType === "movie") {
+                    setMovieFilters(f as DiscoverMovieFilters | undefined);
+                  } else {
+                    setTvFilters(f as DiscoverTvFilters | undefined);
+                  }
+                }}
+              />
             </View>
 
             <SegmentedControl
@@ -96,14 +177,14 @@ const search = () => {
             {data &&
               !loading &&
               !error &&
-              searchQuery.trim() &&
+              debouncedQuery.trim() &&
               data.length > 0 && (
                 <>
                   <View className="flex-row items-center w-dull gap-x-1 justify-evenly">
                     <Text className="text-xl text-white mt-3">
                       Search Results for:
                       <Text className="text-accent font-bold">
-                        {" " + searchQuery}
+                        {" " + debouncedQuery}
                       </Text>
                     </Text>
                     <TouchableOpacity
@@ -126,15 +207,16 @@ const search = () => {
                     <Text className="text-accent font-bold">
                       {" " +
                         getMovieGenresAsString(
-                          Array.isArray(filters.with_genres)
+                          (Array.isArray(filters.with_genres)
                             ? filters.with_genres
-                            : [filters.with_genres].filter(Boolean)
+                            : [filters.with_genres]
+                          ).map(Number),
                         ) +
                         " Genre"}
                     </Text>
                   </Text>
                   <TouchableOpacity
-                    onPress={() => setFilters(undefined)}
+                    onPress={clearActiveFilters}
                     className="flex-row items-center justify-center gap-x-2 h-8 w-8 rounded-full"
                   >
                     <X className="text-accent font-bold" size={24} />
@@ -154,7 +236,7 @@ const search = () => {
                     </Text>
                   </Text>
                   <TouchableOpacity
-                    onPress={() => setFilters(undefined)}
+                    onPress={clearActiveFilters}
                     className="flex-row items-center justify-center gap-x-2 h-8 w-8 rounded-full"
                   >
                     <X className="text-accent font-bold" size={24} />
@@ -169,6 +251,18 @@ const search = () => {
                 error={error}
               />
             </View>
+
+            {/* ── Infinite scroll footer ── */}
+            {loadingMore && (
+              <View className="py-6 items-center">
+                <ActivityIndicator color={colors.accent} />
+              </View>
+            )}
+            {!hasMore && !loading && data.length > 0 && (
+              <Text className="text-center text-gray-500 py-6">
+                End of results
+              </Text>
+            )}
           </View>
         }
       </ScrollView>

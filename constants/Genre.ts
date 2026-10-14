@@ -1,4 +1,46 @@
 // constants/genre.ts
+export interface TmdbGenre {
+  id: number;
+  name: string;
+}
+
+// US certifications. TMDB's discover endpoints filter by certification code
+// with certification_country = US by default. include_adult exists only on
+// the search endpoints, so the "adult" bucket is covered by R / NC-17 /
+// TV-MA here.
+export const MOVIE_CERTIFICATIONS = ["G", "PG", "PG-13", "R", "NC-17"] as const;
+export const TV_CERTIFICATIONS = [
+  "TV-Y",
+  "TV-Y7",
+  "TV-G",
+  "TV-PG",
+  "TV-14",
+  "TV-MA",
+] as const;
+
+export const CERTIFICATION_COUNTRY = "US";
+
+export const MOVIE_SORT_OPTIONS = [
+  { key: "popularity.desc", label: "Popularity" },
+  { key: "vote_average.desc", label: "Rating" },
+  { key: "primary_release_date.desc", label: "Newest first" },
+  { key: "primary_release_date.asc", label: "Oldest first" },
+  { key: "title.asc", label: "Title A-Z" },
+  { key: "revenue.desc", label: "Revenue" },
+] as const;
+
+export const TV_SORT_OPTIONS = [
+  { key: "popularity.desc", label: "Popularity" },
+  { key: "vote_average.desc", label: "Rating" },
+  { key: "first_air_date.desc", label: "Newest first" },
+  { key: "first_air_date.asc", label: "Oldest first" },
+  { key: "name.asc", label: "Name A-Z" },
+] as const;
+
+export const VOTE_MIN = 0;
+export const VOTE_MAX = 10;
+export const YEAR_MIN = 1900;
+export const YEAR_MAX = new Date().getFullYear();
 
 export const MovieGenreId: Record<number, string> = {
   28: "Action",
