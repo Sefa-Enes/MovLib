@@ -1,10 +1,20 @@
 import { colors } from "@/components/colors";
-import GridList from "@/components/GridList";
-import { getAllSeriesWithGenres } from "@/helpers/databaseHelper";
+import NextEpisodeCard from "@/components/NextEpisodeCard";
+import {
+  getAllSeriesWithGenres,
+  getWatchingShows,
+  toggleEpisodeWatched,
+  WatchingShow,
+} from "@/helpers/databaseHelper";
 import useFetch from "@/hooks/useFetch";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { RefreshControl, Text } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  Text,
+} from "react-native";
 
 import { Image, ScrollView, View } from "react-native";
 export default function Home() {
@@ -23,11 +33,41 @@ export default function Home() {
   const onRefresh = useCallback(async () => {
     console.log("onrefresh");
     setRefreshing(true);
+    refetch();
     setTimeout(() => {
       setRefreshKey((k) => k + 1);
       setRefreshing(false);
     }, 500);
   }, []);
+
+  const {
+    data: watching,
+    loading,
+    error,
+    refetch,
+  } = useFetch(getWatchingShows);
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  const onMarkWatched = useCallback(
+    async (show: WatchingShow) => {
+      const ep = show.next_episode;
+      setBusyId(show.id);
+      try {
+        await toggleEpisodeWatched({
+          tvId: show.id,
+          seasonNumber: ep.season_number,
+          episodeNumber: ep.episode_number,
+          watched: true,
+        });
+        await refetch(); // server returns the next episode (or drops the show)
+      } catch (e) {
+        console.error("Mark watched error:", e);
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [refetch],
+  );
 
   return (
     <View className="flex-1 bg-dark-200 ">
@@ -62,7 +102,7 @@ export default function Home() {
           placeholder="Search a movie or series"
           onChangeText={function (text: string): void {}}
         /> */}
-        <View className="mb-20">
+        {/* <View className="mb-20">
           <View className="flex-1 mt-5">
             <Text className="text-lg text-accent font-bold mt-5">
               Series Watchlist
@@ -74,7 +114,34 @@ export default function Home() {
               error={TvWlError}
             />
           </View>
-        </View>
+        </View> */}
+        <Text className="text-lg text-accent font-bold mt-5">Watching</Text>
+        {loading && !watching ? (
+          <ActivityIndicator
+            size="large"
+            color="white"
+            className="mt-10 self-center"
+          />
+        ) : error ? (
+          <Text className="text-white mt-5">Error: {error.message}</Text>
+        ) : !watching?.length ? (
+          <Text className="text-gray-50 mt-5">Nothing to watch right now.</Text>
+        ) : (
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="mt-3"
+            data={watching}
+            keyExtractor={(s) => String(s.id)}
+            renderItem={({ item }) => (
+              <NextEpisodeCard
+                show={item}
+                busy={busyId === item.id}
+                onMarkWatched={onMarkWatched}
+              />
+            )}
+          />
+        )}
       </ScrollView>
     </View>
   );

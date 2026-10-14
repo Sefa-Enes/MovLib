@@ -368,3 +368,24 @@ export const getSeasonProgress = async (
   seasonNumber: number,
 ): Promise<SeasonProgress> =>
   apiJSON(`/tv/${tvId}/season/${seasonNumber}/progress`);
+
+// helpers/backendHelper.ts — add at the end
+export interface WatchingEpisode {
+  tv_id: number;
+  season_number: number;
+  episode_number: number;
+  name: string;
+  still_path: string | null;
+  air_date: string | null;
+}
+
+export interface WatchingShow {
+  id: number;
+  name: string;
+  poster_path: string | null;
+  last_watched_at: string;
+  next_episode: WatchingEpisode;
+}
+
+export const getWatchingShows = (): Promise<WatchingShow[]> =>
+  apiJSON<WatchingShow[]>("/tv/watching");
