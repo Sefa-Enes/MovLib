@@ -88,7 +88,7 @@ export const LibraryFilterModal = ({
 
   const watchedLabel =
     contentType === "tv"
-      ? { watched: "Completed", unwatched: "Not completed" }
+      ? { watched: "Started", unwatched: "Not started" }
       : { watched: "Watched", unwatched: "Not watched" };
 
   return (

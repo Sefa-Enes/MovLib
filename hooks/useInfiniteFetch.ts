@@ -39,14 +39,18 @@ export function useInfiniteFetch<T>(
   fetchRef.current = fetchPage;
   const busyRef = useRef(false);
   const pageRef = useRef(1);
+  const genRef = useRef(0);
 
+  // hooks/useInfiniteFetch.ts — replace loadMore
   const loadMore = useCallback(async () => {
     if (busyRef.current) return;
     busyRef.current = true;
+    const gen = genRef.current;
     setLoadingMore(true);
     try {
       const next = pageRef.current + 1;
       const res = await fetchRef.current(next);
+      if (gen !== genRef.current) return;
       pageRef.current = res.page ?? next;
       setPage(pageRef.current);
       setData((prev) => {
@@ -59,16 +63,43 @@ export function useInfiniteFetch<T>(
       setHasMore(pageRef.current < (res.total_pages ?? 1));
       setTotalResults(res.total_results);
     } catch (e) {
-      setError(e instanceof Error ? e : new Error("Failed to load more"));
+      if (gen === genRef.current) {
+        setError(e instanceof Error ? e : new Error("Failed to load more"));
+      }
     } finally {
-      busyRef.current = false;
-      setLoadingMore(false);
+      if (gen === genRef.current) {
+        busyRef.current = false;
+        setLoadingMore(false);
+      }
     }
   }, []);
 
+  // Reload page 1 without blanking the list (pull-to-refresh).
+  const refetch = useCallback(async () => {
+    const gen = ++genRef.current;
+    busyRef.current = true;
+    try {
+      const res = await fetchRef.current(1);
+      if (gen !== genRef.current) return;
+      pageRef.current = res.page ?? 1;
+      setPage(pageRef.current);
+      setData(res.results ?? []);
+      setHasMore(pageRef.current < (res.total_pages ?? 1));
+      setTotalResults(res.total_results);
+      setError(null);
+    } catch (e) {
+      if (gen === genRef.current) {
+        setError(e instanceof Error ? e : new Error("Failed to load"));
+      }
+    } finally {
+      if (gen === genRef.current) busyRef.current = false;
+    }
+  }, []);
   // Initial load + reload whenever the query/filters/content type change.
   useEffect(() => {
     let cancelled = false;
+    genRef.current += 1;
+    setLoadingMore(false);
     busyRef.current = true;
     setLoading(true);
     setError(null);
@@ -119,6 +150,7 @@ export function useInfiniteFetch<T>(
     page,
     totalResults,
     loadMore,
+    refetch,
     reset,
   };
 }

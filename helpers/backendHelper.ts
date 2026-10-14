@@ -18,6 +18,8 @@
 //  - upsertTvEpisodes groups episodes by season_number and fires one PUT per
 //    season (rare that a caller mixes seasons, but safe).
 
+import { LibraryFilters, toLibraryQuery } from "@/helpers/libraryFilter";
+import type { PageResult } from "@/hooks/useInfiniteFetch";
 import {
   Movie,
   SeasonProgress,
@@ -27,6 +29,33 @@ import {
 } from "@/interface/interfaces";
 import { API_URL } from "@/services/api";
 
+export const LIBRARY_PAGE_SIZE = 20;
+
+export const getLibraryPage = async (
+  type: "movie" | "tv",
+  page: number,
+  filters: LibraryFilters,
+): Promise<PageResult<any>> => {
+  const qs = [
+    toLibraryQuery(filters),
+    `page=${page}`,
+    `limit=${LIBRARY_PAGE_SIZE}`,
+  ]
+    .filter(Boolean)
+    .join("&");
+  const res = await apiJSON<PageResult<any>>(
+    `${type === "movie" ? "/movies" : "/tv"}?${qs}`,
+  );
+  // Same normalization as the full-list helpers.
+  return {
+    ...res,
+    results: (res.results ?? []).map((m: any) => ({
+      ...m,
+      in_library: true,
+      is_watched: m.isWatched,
+    })),
+  };
+};
 // ---------------------------------------------------------------------------
 // Shared fetch helpers
 // ---------------------------------------------------------------------------

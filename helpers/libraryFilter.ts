@@ -82,3 +82,26 @@ export function applyLibraryFilters<T extends LibraryItem>(
 
   return f.sortKey ? sortLibrary(out, f.sortKey, f.sortDir) : out;
 }
+
+// helpers/libraryFilter.ts — add at the end. Keep the rest.
+// Builds the server query string. Defaults are omitted, as the old client logic did.
+export function toLibraryQuery(f: LibraryFilters): string {
+  const p: string[] = [];
+  const add = (k: string, v: string | number) =>
+    p.push(`${k}=${encodeURIComponent(String(v))}`);
+
+  if (f.sortKey) {
+    add("sort", f.sortKey);
+    add("dir", f.sortDir);
+  }
+  if (f.watched !== "all")
+    add("watched", f.watched === "watched" ? "true" : "false");
+  if (f.favoritesOnly) add("favorite", "true");
+  if (f.voteGte > VOTE_MIN) add("vote_gte", f.voteGte);
+  if (f.voteLte < VOTE_MAX) add("vote_lte", f.voteLte);
+  if (f.yearGte > YEAR_MIN) add("year_gte", f.yearGte);
+  if (f.yearLte < YEAR_MAX) add("year_lte", f.yearLte);
+  if (f.include.length) add("genres_in", f.include.join(","));
+  if (f.exclude.length) add("genres_out", f.exclude.join(","));
+  return p.join("&");
+}

@@ -311,7 +311,7 @@ export default function Index() {
               Series Watchlist
             </Text>
             <SideScrollList
-              contentType="movie"
+              contentType="tv"
               data={TvWlData}
               loading={TvWlLoading}
               error={TvWlError}
