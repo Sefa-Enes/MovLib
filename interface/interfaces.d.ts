@@ -230,3 +230,34 @@ export interface WatchedTvEpisode extends TvEpisode {
   watched_at: string | null;
   rewatch_count: number;
 }
+
+interface BackendEpisode {
+  tv_id: number;
+  season_number: number;
+  episode_number: number;
+  id: number | null; // TMDB episode id; null if never stored
+  name: string;
+  overview: string | null;
+  air_date: string | null;
+  still_path: string | null;
+  isWatched: boolean;
+  watched_at: string | null;
+  rewatch_count: number;
+}
+
+export interface WatchingEpisode {
+  tv_id: number;
+  season_number: number;
+  episode_number: number;
+  name: string;
+  still_path: string | null;
+  air_date: string | null;
+}
+
+export interface WatchingShow {
+  id: number;
+  name: string;
+  poster_path: string | null;
+  last_watched_at: string;
+  next_episode: WatchingEpisode;
+}

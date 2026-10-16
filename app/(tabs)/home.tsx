@@ -4,22 +4,35 @@ import {
   getAllSeriesWithGenres,
   getWatchingShows,
   toggleEpisodeWatched,
-  WatchingShow,
 } from "@/helpers/databaseHelper";
 import useFetch from "@/hooks/useFetch";
+import { WatchingShow } from "@/interface/interfaces";
 import { useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
   Text,
+  useWindowDimensions,
 } from "react-native";
 
 import { Image, ScrollView, View } from "react-native";
 export default function Home() {
-  const router = useRouter();
+  const COLUMN_GAP = 8;
+  const { width } = useWindowDimensions();
 
+  const CARD_WIDTH = 240;
+  const CARD_HORIZONTAL_MARGIN = 8;
+  const LIST_HORIZONTAL_PADDING = 20;
+  const router = useRouter();
+  const columnCount = useMemo(() => {
+    const availableWidth = width - LIST_HORIZONTAL_PADDING * 2;
+
+    const itemWidth = CARD_WIDTH + CARD_HORIZONTAL_MARGIN * 2 + COLUMN_GAP;
+
+    return Math.max(1, Math.floor((availableWidth + COLUMN_GAP) / itemWidth));
+  }, [width]);
   const {
     data: TvWlData,
     loading: TvWlLoading,
@@ -127,20 +140,48 @@ export default function Home() {
         ) : !watching?.length ? (
           <Text className="text-gray-50 mt-5">Nothing to watch right now.</Text>
         ) : (
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="mt-3"
-            data={watching}
-            keyExtractor={(s) => String(s.id)}
-            renderItem={({ item }) => (
-              <NextEpisodeCard
-                show={item}
-                busy={busyId === item.id}
-                onMarkWatched={onMarkWatched}
-              />
-            )}
-          />
+          // <View className="flex-1 mt-5">
+          //   <FlatList
+          //     horizontal
+          //     showsHorizontalScrollIndicator={false}
+          //     data={watching}
+          //     keyExtractor={(s) => String(s.id)}
+          //     renderItem={({ item }) => (
+          //       <NextEpisodeCard
+          //         item={item}
+          //         busy={busyId === item.id}
+          //         onMarkWatched={onMarkWatched}
+          //       />
+          //     )}
+          //     contentContainerStyle={{
+          //       paddingBottom: 120,
+          //     }}
+          //     scrollEnabled={false}
+          //   />
+          // </View>
+          <View className="flex-1 mt-5">
+            <FlatList
+              data={watching}
+              key={columnCount}
+              renderItem={({ item }) => (
+                <NextEpisodeCard
+                  item={item}
+                  busy={busyId === item.id}
+                  onMarkWatched={onMarkWatched}
+                />
+              )}
+              keyExtractor={(item) => item.id.toString()}
+              numColumns={columnCount}
+              columnWrapperStyle={{
+                justifyContent: "center",
+                gap: COLUMN_GAP,
+              }}
+              contentContainerStyle={{
+                paddingBottom: 120,
+              }}
+              scrollEnabled={false}
+            />
+          </View>
         )}
       </ScrollView>
     </View>

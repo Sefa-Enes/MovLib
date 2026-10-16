@@ -21,11 +21,13 @@
 import { LibraryFilters, toLibraryQuery } from "@/helpers/libraryFilter";
 import type { PageResult } from "@/hooks/useInfiniteFetch";
 import {
+  BackendEpisode,
   Movie,
   SeasonProgress,
   Tv,
   TvEpisode,
   WatchedTvEpisode,
+  WatchingShow,
 } from "@/interface/interfaces";
 import { API_URL } from "@/services/api";
 
@@ -269,19 +271,6 @@ export const upsertTvEpisodes = async (
 };
 
 // Shape returned by GET /tv/{id}/season/{s}/episodes (matches store.Episode).
-interface BackendEpisode {
-  tv_id: number;
-  season_number: number;
-  episode_number: number;
-  id: number | null; // TMDB episode id; null if never stored
-  name: string;
-  overview: string | null;
-  air_date: string | null;
-  still_path: string | null;
-  isWatched: boolean;
-  watched_at: string | null;
-  rewatch_count: number;
-}
 
 function toWatchedTvEpisode(ep: BackendEpisode): WatchedTvEpisode {
   // Fall back to episode_number when tmdb_episode_id was never stored,
@@ -370,22 +359,6 @@ export const getSeasonProgress = async (
   apiJSON(`/tv/${tvId}/season/${seasonNumber}/progress`);
 
 // helpers/backendHelper.ts — add at the end
-export interface WatchingEpisode {
-  tv_id: number;
-  season_number: number;
-  episode_number: number;
-  name: string;
-  still_path: string | null;
-  air_date: string | null;
-}
-
-export interface WatchingShow {
-  id: number;
-  name: string;
-  poster_path: string | null;
-  last_watched_at: string;
-  next_episode: WatchingEpisode;
-}
 
 export const getWatchingShows = (): Promise<WatchingShow[]> =>
   apiJSON<WatchingShow[]>("/tv/watching");
