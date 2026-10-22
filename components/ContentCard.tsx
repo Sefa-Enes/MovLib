@@ -10,7 +10,7 @@ import {
 import { MediaItem, Movie, Tv } from "@/interface/interfaces";
 import { fetchTvDetails } from "@/services/api";
 import { Href, router } from "expo-router";
-import { Check, Eye, Plus, Star } from "lucide-react-native";
+import { Check, Eye, Hourglass, Plus, Star } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
@@ -207,7 +207,13 @@ const ContentCard = ({
               : "https://placehold.co/600x400/1a1a1a/ffffff.png",
           }}
           resizeMode="cover"
-          className="w-full h-60 rounded-lg"
+          className={
+            contentType === "tv" &&
+            tvProgressRatio !== null &&
+            item.status === "Ended"
+              ? "w-full h-56 rounded-lg border-2" + " border-purple-500"
+              : "w-full h-56 rounded-lg"
+          }
         />
 
         {/* TV watched-ratio fade: clear bottom ↔ faded top, proportional to
@@ -220,6 +226,18 @@ const ContentCard = ({
             {renderTvProgressFade(tvProgressRatio)}
           </View>
         )}
+        {contentType === "tv" &&
+          tvProgressRatio === 1 &&
+          item.status !== "Ended" && (
+            <View
+              pointerEvents="none"
+              className="absolute bottom-2 left-2  rounded-lg  items-center justify-center border-none"
+            >
+              <View className="bg-black/50 rounded-full  p-1 border border-white/30">
+                <Hourglass size={24} color="rgba(255,255,255,0.6)" />
+              </View>
+            </View>
+          )}
 
         {contentType === "movie" && (
           <View className="absolute top-2 right-2 rounded-lg flex-row items-center">
