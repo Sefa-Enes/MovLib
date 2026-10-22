@@ -231,7 +231,7 @@ export interface WatchedTvEpisode extends TvEpisode {
   rewatch_count: number;
 }
 
-interface BackendEpisode {
+export interface BackendEpisode {
   tv_id: number;
   season_number: number;
   episode_number: number;

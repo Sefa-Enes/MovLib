@@ -60,7 +60,19 @@ const EpisodeRow = ({ episode, onPress }: EpisodeRowProps) => {
         </Text>
 
         {episode.air_date && (
-          <Text className="text-gray-500 text-xs mt-1">{episode.air_date}</Text>
+          <Text className="text-gray-400 text-xs mt-1">{episode.air_date}</Text>
+        )}
+        {episode.isWatched && episode.watched_at && (
+          <Text className="text-gray-400 text-xs mt-1">
+            Watched At:{" "}
+            {new Date(episode.watched_at).toLocaleDateString("tr-TR", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </Text>
         )}
 
         {!isAired && (

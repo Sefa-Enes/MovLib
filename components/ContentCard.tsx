@@ -178,7 +178,10 @@ const ContentCard = ({
     router.push(`/${pathHead}/${id}` as Href);
   };
   return (
-    <TouchableOpacity onPress={handleRedirect} className="w-36 m-2">
+    <TouchableOpacity
+      onPress={handleRedirect}
+      className={isGrid ? "w-36" : "w-36 m-2"}
+    >
       {/* 🔹 IMAGE WRAPPER */}
       <View className="relative">
         <Image

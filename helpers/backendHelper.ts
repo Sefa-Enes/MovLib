@@ -362,3 +362,5 @@ export const getSeasonProgress = async (
 
 export const getWatchingShows = (): Promise<WatchingShow[]> =>
   apiJSON<WatchingShow[]>("/tv/watching");
+export const getWatchingAwhileShows = (): Promise<WatchingShow[]> =>
+  apiJSON<WatchingShow[]>("/tv/watchingawhile");

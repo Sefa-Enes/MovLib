@@ -99,7 +99,7 @@ export default function LibraryScreen() {
               }
             />
           </View>
-          // library.tsx — GridList and footer
+
           <GridList
             contentType={contentType}
             data={data}

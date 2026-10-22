@@ -11,6 +11,8 @@ import {
   View,
 } from "react-native";
 
+export const CARD_WIDTH = 256;
+
 interface Props {
   item: WatchingShow;
   busy?: boolean;
@@ -26,22 +28,26 @@ const NextEpisodeCard = ({ item, busy = false, onMarkWatched }: Props) => {
   return (
     <TouchableOpacity
       onPress={handleRedirect}
-      className="h-56 bg-black rounded-lg"
+      style={{
+        width: CARD_WIDTH,
+        maxWidth: "100%", // never wider than parent on very narrow screens
+      }}
+      className="h-56 bg-slate-700 rounded-lg overflow-hidden"
     >
-      <View className="w-64 mr-3">
-        <Image
-          source={{
-            uri: ep.still_path
-              ? `https://image.tmdb.org/t/p/w300${ep.still_path}`
-              : "https://placehold.co/600x400/1a1a1a/ffffff.png",
-          }}
-          resizeMode="cover"
-          className="w-full h-36 rounded-lg"
-        />
+      <Image
+        source={{
+          uri: ep.still_path
+            ? `https://image.tmdb.org/t/p/w300${ep.still_path}`
+            : "https://placehold.co/600x400/1a1a1a/ffffff.png",
+        }}
+        resizeMode="cover"
+        className="w-full h-36"
+      />
+      <View className="px-2">
         <Text numberOfLines={1} className="text-white text-sm font-bold mt-2">
           {item.name}
         </Text>
-        <View className="flex-row items-center  justify-between mt-1">
+        <View className="flex-row items-center justify-between mt-1">
           <Text numberOfLines={1} className="text-gray-50 text-xs flex-1 mr-2">
             {`S${ep.season_number}/E${ep.episode_number} · ${ep.name}`}
           </Text>
