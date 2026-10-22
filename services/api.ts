@@ -18,8 +18,6 @@ import {
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080";
 
-// Genre catalog is seeded in the database; this endpoint reads it back so the
-// app never hardcodes the TMDB genre lists.
 export const fetchGenres = async (): Promise<TmdbGenre[]> => {
   const endpoint = `${API_URL}/genres`;
   const response = await fetch(endpoint, { method: "GET" });
@@ -30,10 +28,8 @@ export const fetchGenres = async (): Promise<TmdbGenre[]> => {
   return data;
 };
 
-// TMDB catalog calls are proxied by the backend. The response shape is
-// identical to api.themoviedb.org/3, so services/api.ts only needs to
-// swap its base URL constant to this value — no parser changes.
 export const TMDB_BASE_URL = `${API_URL}/tmdb`;
+
 export const TMDB_CONFIG = {
   BASE_URL: TMDB_BASE_URL,
   API_KEY: process.env.EXPO_PUBLIC_MOVIE_API_KEY,
@@ -42,6 +38,7 @@ export const TMDB_CONFIG = {
     // Authorization: `Bearer ${process.env.EXPO_PUBLIC_MOVIE_API_KEY}`,
   },
 };
+
 export const fetchMovies = async ({
   query,
   filters,
@@ -96,12 +93,6 @@ export const fetchSeries = async ({
   const data = await response.json();
   return data.results;
 };
-
-// ── Paginated variants (infinite scroll) ───────────────────────────────────
-// Same routing as fetchMovies/fetchSeries, but they return the FULL TMDB
-// envelope { page, results, total_pages, total_results } instead of just
-// results, so the caller can append pages until total_pages is reached.
-// The backend proxy passes `page` through untouched.
 
 export const fetchMoviesPage = async ({
   query,
@@ -196,7 +187,7 @@ export const fetchTvDetails = async ({
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch movie: ${response.statusText}`);
+    throw new Error(`Failed to fetch tv show: ${response.statusText}`);
   }
 
   const data = await response.json();
@@ -225,6 +216,7 @@ export const fetchSimilar = async ({
   const data = await response.json();
   return data.results;
 };
+
 export const addToWatchList = async ({
   contentType = "movie",
 

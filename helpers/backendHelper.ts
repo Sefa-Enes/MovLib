@@ -127,6 +127,7 @@ export const insertTvWithGenres = async (
       first_air_date: tv.first_air_date ?? null,
       vote_average: tv.vote_average ?? 0,
       genre_ids: tv.genre_ids ?? [],
+      status: tv.status,
     }),
   });
 };

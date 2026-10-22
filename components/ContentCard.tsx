@@ -8,6 +8,7 @@ import {
   toggleTvWatched,
 } from "@/helpers/databaseHelper";
 import { MediaItem, Movie, Tv } from "@/interface/interfaces";
+import { fetchTvDetails } from "@/services/api";
 import { Href, router } from "expo-router";
 import { Check, Eye, Plus, Star } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
@@ -119,7 +120,22 @@ const ContentCard = ({
 
     return {
       insert: async (media: MediaItem, watched: boolean) => {
-        return insertTvWithGenres(media as Tv, watched);
+        let payload: MediaItem = media;
+        try {
+          const details = await fetchTvDetails({ id: Number(media.id) });
+          if (details) {
+            payload = { ...media, ...details };
+          }
+        } catch (err) {
+          // Detay alınamazsa insert iptal olmaz, status sadece boş kalır.
+          console.warn(
+            "fetchTvDetails failed, inserting without details:",
+            err,
+          );
+        }
+        return insertTvWithGenres(payload as Tv, watched);
+
+        // return insertTvWithGenres(media as Tv, watched);
       },
 
       remove: async (mediaId: number) => {
