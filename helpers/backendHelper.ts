@@ -363,5 +363,36 @@ export const getSeasonProgress = async (
 
 export const getWatchingShows = (): Promise<WatchingShow[]> =>
   apiJSON<WatchingShow[]>("/tv/watching");
+
 export const getWatchingAwhileShows = (): Promise<WatchingShow[]> =>
   apiJSON<WatchingShow[]>("/tv/watchingawhile");
+
+export interface EpisodeWatchedItem {
+  id: number; // TMDB episode id
+  season_number: number;
+  watched: boolean;
+}
+
+export interface EpisodeBatchResult {
+  applied: number;
+  skipped_unaired: number;
+  next_episode: BackendEpisode | null;
+}
+
+// PATCH /tv/{id}/episodes/watched — one request for one episode or a whole
+// season. Backend validates every item against TMDB, auto-adds (or restores)
+// the show when any item has watched=true, and skips unaired episodes.
+// Throws on non-2xx (400 invalid body / unknown id, 502 TMDB failure), so
+// callers must update local state only after this resolves.
+export const setEpisodesWatched = async (
+  tvId: number,
+  items: EpisodeWatchedItem[],
+): Promise<EpisodeBatchResult> => {
+  if (items.length === 0) {
+    return { applied: 0, skipped_unaired: 0, next_episode: null };
+  }
+  return apiJSON<EpisodeBatchResult>(`/tv/${tvId}/episodes/watched`, {
+    method: "PATCH",
+    body: JSON.stringify(items),
+  });
+};

@@ -1,8 +1,4 @@
-import {
-  SeasonProgress,
-  TvSeason,
-  WatchedTvEpisode,
-} from "@/interface/interfaces";
+import { TvSeason, WatchedTvEpisode } from "@/interface/interfaces";
 import { isEpisodeAired } from "@/utils/episodeHelpers";
 import { Check, ChevronDown, ChevronUp } from "lucide-react-native";
 import React from "react";
@@ -12,7 +8,6 @@ import EpisodeRow from "./EpisodeRow";
 interface SeasonEpisodeListProps {
   seasons: TvSeason[];
   episodesBySeason: Record<number, WatchedTvEpisode[]>;
-  seasonProgress: Record<number, SeasonProgress>;
   expandedSeason: number | null;
   loadingSeason: number | null;
   episodeError: string | null;
@@ -27,7 +22,6 @@ interface SeasonEpisodeListProps {
 const SeasonEpisodeList = ({
   seasons,
   episodesBySeason,
-  seasonProgress,
   expandedSeason,
   loadingSeason,
   episodeError,
@@ -53,31 +47,29 @@ const SeasonEpisodeList = ({
         const seasonNumber = season.season_number;
         const isExpanded = expandedSeason === seasonNumber;
 
-        const episodes = episodesBySeason[seasonNumber] ?? [];
-
-        const storedProgress = seasonProgress[seasonNumber];
+        const loadedEpisodes = episodesBySeason[seasonNumber];
+        const seasonIsLoaded = loadedEpisodes !== undefined;
+        const episodes = loadedEpisodes ?? [];
 
         const airedEpisodes = episodes.filter((episode) =>
           isEpisodeAired(episode.air_date),
         );
 
-        const watchedCount = airedEpisodes.filter(
-          (episode) => episode.isWatched,
-        ).length;
+        const watchedCount = seasonIsLoaded
+          ? airedEpisodes.filter((episode) => episode.isWatched).length
+          : (season.watched_episode_count ?? 0);
 
         const totalEpisodeCount =
-          airedEpisodes.length > 0
+          seasonIsLoaded && airedEpisodes.length > 0
             ? airedEpisodes.length
             : season.episode_count;
 
-        const upcomingCount =
-          episodes.length > 0 ? episodes.length - airedEpisodes.length : 0;
-        const seasonIsLoaded = episodes.length > 0 || Boolean(storedProgress);
+        const upcomingCount = seasonIsLoaded
+          ? episodes.length - airedEpisodes.length
+          : 0;
 
         const seasonIsCompleted =
-          seasonIsLoaded &&
-          totalEpisodeCount > 0 &&
-          watchedCount >= totalEpisodeCount;
+          totalEpisodeCount > 0 && watchedCount >= totalEpisodeCount;
 
         const seasonIsInProgress = watchedCount > 0 && !seasonIsCompleted;
 

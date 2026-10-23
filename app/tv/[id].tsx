@@ -30,8 +30,10 @@ const TvDetails = () => {
       setMediaObject(data);
     }
   }, [data, setMediaObject]);
-
-  if (loading && !data) {
+  const routeId = Number(id);
+  const current =
+    mediaObject && mediaObject.id === routeId ? mediaObject : data;
+  if (!current) {
     return (
       <View className="flex-1 justify-center items-center bg-accent">
         <ActivityIndicator size="large" color="#fff" />
@@ -39,7 +41,7 @@ const TvDetails = () => {
     );
   }
 
-  if (error) {
+  if (error && !current) {
     return (
       <View className="flex-1 justify-center items-center bg-accent">
         <Text>Error: {error.message}</Text>
@@ -52,7 +54,7 @@ const TvDetails = () => {
       <DetailsPage
         setMediaObject={setMediaObject}
         contentType={contentType}
-        mediaObject={mediaObject || data}
+        mediaObject={current}
         detailData={data}
         setFilters={setFilters}
         refetchDetails={refetch}

@@ -207,6 +207,7 @@ export interface TvSeason {
   poster_path: string | null;
   season_number: number;
   vote_average: number;
+  watched_episode_count?: number;
 }
 export interface TvEpisode {
   id: number;
@@ -224,11 +225,14 @@ export interface TvEpisode {
   production_code?: string;
 }
 export interface WatchedTvEpisode extends TvEpisode {
-  tv_id: number;
-  tmdb_episode_id: number;
+  // Legacy DB-row fields. Proxy season responses (TMDB + annotation) do not
+  // carry them, so they are optional.
+  tv_id?: number;
+  tmdb_episode_id?: number;
+  rewatch_count?: number;
+  // Backend proxy annotation: absent row -> false / null.
   isWatched: boolean;
   watched_at: string | null;
-  rewatch_count: number;
 }
 
 export interface BackendEpisode {

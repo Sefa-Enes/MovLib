@@ -1,26 +1,16 @@
 import {
   deleteMovie,
   deleteTvShow,
-  getEpisodesBySeason,
   getMovieById,
-  getSeasonProgress,
-  getTvProgress,
   getTvShowById,
   insertMovieWithGenres,
   insertTvWithGenres,
-  toggleEpisodeWatched,
+  setEpisodesWatched,
   toggleMovieWatched,
   toggleTvWatched,
-  upsertTvEpisodes,
 } from "@/helpers/databaseHelper";
 import useFetch from "@/hooks/useFetch";
-import {
-  MediaItem,
-  Movie,
-  SeasonProgress,
-  Tv,
-  WatchedTvEpisode,
-} from "@/interface/interfaces";
+import { MediaItem, Movie, Tv, WatchedTvEpisode } from "@/interface/interfaces";
 import { fetchSimilar, fetchTvSeasonEpisodes } from "@/services/api";
 import { isEpisodeAired } from "@/utils/episodeHelpers";
 import { DiscoverMovieFilters } from "@/utils/queryBuilder";
@@ -33,7 +23,7 @@ import {
   Plus,
   X,
 } from "lucide-react-native";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Image,
   Modal,
@@ -87,31 +77,67 @@ const DetailsPage = ({
   const [seasonEpisodes, setSeasonEpisodes] = useState<
     Record<number, WatchedTvEpisode[]>
   >({});
-  const [seasonProgress, setSeasonProgress] = useState<
-    Record<number, SeasonProgress>
-  >({});
   const [loadingSeason, setLoadingSeason] = useState<number | null>(null);
 
   const [episodeError, setEpisodeError] = useState<string | null>(null);
 
-  const [tvProgress, setTvProgress] = useState({
-    totalEpisodes: 0,
-    watchedEpisodes: 0,
-    percentage: 0,
-  });
-  // 🔹 DB'den mevcut durumu al
+  // Current show id. Async results for a previous show (user navigated via
+  // Similar) are ignored when this no longer matches.
+  const tvIdRef = useRef<number | undefined>(mediaObject?.id);
+
+  useEffect(() => {
+    tvIdRef.current = mediaObject?.id;
+    setSeasonEpisodes({});
+    setExpandedSeason(null);
+    setEpisodeError(null);
+  }, [mediaObject?.id]);
+
+  // Specials (season 0) are hidden: library progress excludes them.
+  const visibleSeasons = useMemo(
+    () => (detailData?.seasons ?? []).filter((s) => s.season_number > 0),
+    [detailData?.seasons],
+  );
+  // components/DetailsPage/DetailsPage.tsx
+  // 🔹 Library durumu: proxy annotation'dan (in_library / is_watched).
+  // detailData is the fresh tv/{id} or movie/{id} response; mediaObject may be
+  // a list item cached in context. DB lookup only when annotation is missing
+  // (annotation is best-effort and is dropped if the flag query fails).
   useEffect(() => {
     if (!mediaObject) {
       return;
     }
 
+    const fresh =
+      detailData && detailData.id === mediaObject.id ? detailData : undefined;
+    const source = fresh ?? mediaObject;
+
+    if (typeof source.in_library === "boolean") {
+      setInWatchlist(source.in_library);
+      setIsWatched(
+        contentType === "movie" && source.in_library && !!source.is_watched,
+      );
+      return;
+    }
+
+    // No annotation on the list item: wait for fresh details.
+    if (!fresh) {
+      return;
+    }
+
+    // Fresh details have no annotation either: fall back to the DB.
+    const id = mediaObject.id;
+    let cancelled = false;
+
     const fetchData = async () => {
       try {
         const data =
           contentType === "movie"
-            ? await getMovieById(mediaObject.id)
-            : await getTvShowById(mediaObject.id);
+            ? await getMovieById(id)
+            : await getTvShowById(id);
 
+        if (cancelled) {
+          return;
+        }
         setInWatchlist(!!data);
         setIsWatched(!!data?.isWatched);
       } catch (err) {
@@ -120,113 +146,130 @@ const DetailsPage = ({
     };
 
     fetchData();
-  }, [mediaObject?.id, contentType]);
-
-  useEffect(() => {
-    if (
-      contentType !== "tv" ||
-      !mediaObject?.id ||
-      !detailData?.seasons ||
-      detailData.seasons.length === 0
-    ) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadStoredSeasonData = async () => {
-      try {
-        const entries = await Promise.all(
-          detailData.seasons!.map(async (season) => {
-            const seasonNumber = season.season_number;
-
-            const [episodes, progress] = await Promise.all([
-              getEpisodesBySeason(mediaObject.id, seasonNumber),
-              getSeasonProgress(mediaObject.id, seasonNumber),
-            ]);
-
-            return {
-              seasonNumber,
-              episodes,
-              progress,
-            };
-          }),
-        );
-
-        if (cancelled) {
-          return;
-        }
-
-        const episodeMap: Record<number, WatchedTvEpisode[]> = {};
-
-        const progressMap: Record<number, SeasonProgress> = {};
-
-        entries.forEach(({ seasonNumber, episodes, progress }) => {
-          episodeMap[seasonNumber] = episodes;
-          progressMap[seasonNumber] = progress;
-        });
-
-        setSeasonEpisodes(episodeMap);
-        setSeasonProgress(progressMap);
-      } catch (error) {
-        console.error("Stored season data fetch error:", error);
-      }
-    };
-
-    loadStoredSeasonData();
 
     return () => {
       cancelled = true;
     };
-  }, [contentType, mediaObject?.id, detailData?.seasons]);
+  }, [mediaObject?.id, detailData, contentType]);
+
   const ensureSeasonEpisodes = async (
     seasonNumber: number,
-  ): Promise<WatchedTvEpisode[]> => {
+    force: boolean = false,
+  ): Promise<WatchedTvEpisode[] | null> => {
     if (!mediaObject || contentType !== "tv") {
-      return [];
+      return null;
     }
 
-    const existingEpisodes = seasonEpisodes[seasonNumber];
-
-    if (existingEpisodes && existingEpisodes.length > 0) {
-      return existingEpisodes;
+    if (!force) {
+      const cached = seasonEpisodes[seasonNumber];
+      if (cached !== undefined) {
+        return cached;
+      }
     }
+
+    const tvId = mediaObject.id;
 
     try {
       setLoadingSeason(seasonNumber);
       setEpisodeError(null);
 
-      const fetchedEpisodes = await fetchTvSeasonEpisodes({
-        tvId: mediaObject.id,
-        seasonNumber,
-      });
+      const episodes = await fetchTvSeasonEpisodes({ tvId, seasonNumber });
 
-      await upsertTvEpisodes(mediaObject.id, fetchedEpisodes);
-
-      const savedEpisodes = await getEpisodesBySeason(
-        mediaObject.id,
-        seasonNumber,
-      );
+      if (tvIdRef.current !== tvId) {
+        return null; // page switched to another show
+      }
 
       setSeasonEpisodes((previous) => ({
         ...previous,
-        [seasonNumber]: savedEpisodes,
+        [seasonNumber]: episodes,
       }));
 
-      return savedEpisodes;
+      return episodes;
     } catch (error) {
       console.error("Season episodes fetch error:", error);
 
-      setEpisodeError(
-        error instanceof Error
-          ? error.message
-          : "Episodes could not be loaded.",
-      );
+      if (tvIdRef.current === tvId) {
+        setEpisodeError(
+          error instanceof Error
+            ? error.message
+            : "Episodes could not be loaded.",
+        );
+      }
 
-      return [];
+      return null;
     } finally {
-      setLoadingSeason(null);
+      setLoadingSeason((current) =>
+        current === seasonNumber ? null : current,
+      );
     }
+  };
+
+  // Applies a confirmed (server-accepted) watched change to the cache.
+  const applyLocalWatched = (
+    seasonNumber: number,
+    episodeIds: Set<number>,
+    watched: boolean,
+  ) => {
+    const watchedAt = watched ? new Date().toISOString() : null;
+
+    setSeasonEpisodes((previous) => {
+      const episodes = previous[seasonNumber];
+      if (!episodes) {
+        return previous;
+      }
+      return {
+        ...previous,
+        [seasonNumber]: episodes.map((episode) =>
+          episodeIds.has(episode.id)
+            ? { ...episode, isWatched: watched, watched_at: watchedAt }
+            : episode,
+        ),
+      };
+    });
+  };
+
+  // One batch request. Local state changes only after the request succeeds;
+  // on error this throws and the UI keeps its previous state.
+  const commitWatched = async (
+    seasonNumber: number,
+    episodes: WatchedTvEpisode[],
+    watched: boolean,
+  ) => {
+    if (!mediaObject || episodes.length === 0) {
+      return;
+    }
+
+    const tvId = mediaObject.id;
+
+    const result = await setEpisodesWatched(
+      tvId,
+      episodes.map((episode) => ({
+        id: episode.id,
+        season_number: seasonNumber,
+        watched,
+      })),
+    );
+
+    if (tvIdRef.current !== tvId) {
+      return;
+    }
+
+    // Backend auto-adds / restores the show when an episode is marked watched.
+    if (watched && result.applied > 0) {
+      setInWatchlist(true);
+    }
+
+    if (result.skipped_unaired > 0) {
+      // Client and server disagree on air dates: trust the server.
+      await ensureSeasonEpisodes(seasonNumber, true);
+      return;
+    }
+
+    applyLocalWatched(
+      seasonNumber,
+      new Set(episodes.map((episode) => episode.id)),
+      watched,
+    );
   };
   const dbFns = useMemo(() => {
     if (contentType === "movie") {
@@ -301,84 +344,11 @@ const DetailsPage = ({
     }
   };
   useEffect(() => {
-    if (mediaObject) {
+    if (mediaObject?.id) {
       refetch();
     }
-  }, [mediaObject]);
-  useEffect(() => {
-    if (contentType !== "tv" || !mediaObject) {
-      return;
-    }
-
-    const loadTvProgress = async () => {
-      try {
-        const progress = await getTvProgress(mediaObject.id);
-        setTvProgress(progress);
-      } catch (error) {
-        console.error("TV progress fetch error:", error);
-      }
-    };
-
-    loadTvProgress();
-  }, [contentType, mediaObject]);
-
-  const loadSeasonEpisodes = async (seasonNumber: number) => {
-    if (!mediaObject || contentType !== "tv") {
-      return;
-    }
-
-    const existingEpisodes = seasonEpisodes[seasonNumber];
-
-    if (existingEpisodes && existingEpisodes.length > 0) {
-      return;
-    }
-
-    try {
-      setLoadingSeason(seasonNumber);
-      setEpisodeError(null);
-
-      const fetchedEpisodes = await fetchTvSeasonEpisodes({
-        tvId: mediaObject.id,
-        seasonNumber,
-      });
-
-      await upsertTvEpisodes(mediaObject.id, fetchedEpisodes);
-
-      const savedEpisodes = await getEpisodesBySeason(
-        mediaObject.id,
-        seasonNumber,
-      );
-
-      setSeasonEpisodes((previous) => ({
-        ...previous,
-        [seasonNumber]: savedEpisodes,
-      }));
-
-      const updatedProgress = await getTvProgress(mediaObject.id);
-
-      setTvProgress(updatedProgress);
-
-      const updatedSeasonProgress = await getSeasonProgress(
-        mediaObject.id,
-        seasonNumber,
-      );
-
-      setSeasonProgress((previous) => ({
-        ...previous,
-        [seasonNumber]: updatedSeasonProgress,
-      }));
-    } catch (error) {
-      console.error("Season episodes fetch error:", error);
-
-      setEpisodeError(
-        error instanceof Error
-          ? error.message
-          : "Episodes could not be loaded.",
-      );
-    } finally {
-      setLoadingSeason(null);
-    }
-  };
+  }, [mediaObject?.id, contentType]);
+  // components/DetailsPage/DetailsPage.tsx
   const handleSeasonPress = async (seasonNumber: number) => {
     if (expandedSeason === seasonNumber) {
       setExpandedSeason(null);
@@ -387,26 +357,9 @@ const DetailsPage = ({
 
     setExpandedSeason(seasonNumber);
 
-    const episodes = await ensureSeasonEpisodes(seasonNumber);
-
-    if (!mediaObject) {
-      return;
-    }
-
-    const progress = await getTvProgress(mediaObject.id);
-
-    setTvProgress(progress);
-
-    const seasonProgressData = await getSeasonProgress(
-      mediaObject.id,
-      seasonNumber,
-    );
-
-    setSeasonProgress((previous) => ({
-      ...previous,
-      [seasonNumber]: seasonProgressData,
-    }));
+    await ensureSeasonEpisodes(seasonNumber);
   };
+
   const handleEpisodeWatchedPress = async (episode: WatchedTvEpisode) => {
     if (!mediaObject || contentType !== "tv") {
       return;
@@ -415,39 +368,13 @@ const DetailsPage = ({
       return;
     }
     try {
-      await toggleEpisodeWatched({
-        tvId: mediaObject.id,
-        seasonNumber: episode.season_number,
-        episodeNumber: episode.episode_number,
-        watched: !episode.isWatched,
-      });
-
-      const updatedEpisodes = await getEpisodesBySeason(
-        mediaObject.id,
-        episode.season_number,
-      );
-
-      setSeasonEpisodes((previous) => ({
-        ...previous,
-        [episode.season_number]: updatedEpisodes,
-      }));
-
-      const progress = await getTvProgress(mediaObject.id);
-
-      setTvProgress(progress);
-      const updatedSeasonProgress = await getSeasonProgress(
-        mediaObject.id,
-        episode.season_number,
-      );
-
-      setSeasonProgress((previous) => ({
-        ...previous,
-        [episode.season_number]: updatedSeasonProgress,
-      }));
+      await commitWatched(episode.season_number, [episode], !episode.isWatched);
     } catch (error) {
       console.error("Episode watched toggle error:", error);
+      setEpisodeError("Episode could not be updated.");
     }
   };
+
   const handleMarkSeasonWatched = async (
     seasonNumber: number,
     watched: boolean,
@@ -457,51 +384,24 @@ const DetailsPage = ({
     }
 
     try {
-      // Sezon kapalı olsa bile bölümleri getirir
+      // Fetches the season (1 proxy request) if it was never opened.
       const episodes = await ensureSeasonEpisodes(seasonNumber);
 
-      if (episodes.length === 0) {
+      if (!episodes || episodes.length === 0) {
         return;
       }
 
-      const airedEpisodes = episodes.filter((episode) =>
-        isEpisodeAired(episode.air_date),
+      // Only aired episodes whose state actually changes. Already-watched
+      // episodes are not re-sent, so their watched_at is preserved.
+      const targets = episodes.filter(
+        (episode) =>
+          isEpisodeAired(episode.air_date) && episode.isWatched !== watched,
       );
 
-      for (const episode of airedEpisodes) {
-        await toggleEpisodeWatched({
-          tvId: mediaObject.id,
-          seasonNumber,
-          episodeNumber: episode.episode_number,
-          watched,
-        });
-      }
-
-      const updatedEpisodes = await getEpisodesBySeason(
-        mediaObject.id,
-        seasonNumber,
-      );
-
-      setSeasonEpisodes((previous) => ({
-        ...previous,
-        [seasonNumber]: updatedEpisodes,
-      }));
-
-      const updatedTvProgress = await getTvProgress(mediaObject.id);
-
-      setTvProgress(updatedTvProgress);
-
-      const updatedSeasonProgress = await getSeasonProgress(
-        mediaObject.id,
-        seasonNumber,
-      );
-
-      setSeasonProgress((previous) => ({
-        ...previous,
-        [seasonNumber]: updatedSeasonProgress,
-      }));
+      await commitWatched(seasonNumber, targets, watched);
     } catch (error) {
       console.error("Season watched toggle error:", error);
+      setEpisodeError("Season could not be updated.");
     }
   };
   return (
@@ -759,9 +659,8 @@ const DetailsPage = ({
             />
 
             <SeasonEpisodeList
-              seasons={detailData?.seasons ?? []}
+              seasons={visibleSeasons}
               episodesBySeason={seasonEpisodes}
-              seasonProgress={seasonProgress}
               expandedSeason={expandedSeason}
               loadingSeason={loadingSeason}
               episodeError={episodeError}

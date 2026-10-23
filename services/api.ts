@@ -6,7 +6,7 @@ import {
   MediaItem,
   Movie,
   Tv,
-  TvEpisode,
+  WatchedTvEpisode,
 } from "@/interface/interfaces";
 import {
   buildDiscoverMovieParams,
@@ -266,7 +266,7 @@ export const fetchTvSeasonEpisodes = async ({
 }: {
   tvId: number;
   seasonNumber: number;
-}): Promise<TvEpisode[]> => {
+}): Promise<WatchedTvEpisode[]> => {
   const endpoint =
     `${TMDB_CONFIG.BASE_URL}/tv/${tvId}/season/${seasonNumber}` +
     `?language=en-US`;
@@ -294,5 +294,9 @@ export const fetchTvSeasonEpisodes = async ({
 
   const data = JSON.parse(responseText);
 
-  return data.episodes ?? [];
+  return (data.episodes ?? []).map((ep: any) => ({
+    ...ep,
+    isWatched: ep.isWatched === true,
+    watched_at: ep.watched_at ?? null,
+  }));
 };
