@@ -37,12 +37,9 @@ export const getLibraryPage = async (
   type: "movie" | "tv",
   page: number,
   filters: LibraryFilters,
+  limit: number = LIBRARY_PAGE_SIZE,
 ): Promise<PageResult<any>> => {
-  const qs = [
-    toLibraryQuery(filters),
-    `page=${page}`,
-    `limit=${LIBRARY_PAGE_SIZE}`,
-  ]
+  const qs = [toLibraryQuery(filters), `page=${page}`, `limit=${limit}`]
     .filter(Boolean)
     .join("&");
   const res = await apiJSON<PageResult<any>>(

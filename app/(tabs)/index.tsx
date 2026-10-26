@@ -1,9 +1,8 @@
 import { colors } from "@/components/colors";
 import SideScrollList from "@/components/SideScrollList";
-import {
-  getAllMoviesWithGenres,
-  getAllSeriesWithGenres,
-} from "@/helpers/databaseHelper";
+import { getLibraryPage } from "@/helpers/databaseHelper";
+import { LibraryFilters, defaultLibraryFilters } from "@/helpers/libraryFilter";
+import { LibrarySortKey } from "@/helpers/librarySort";
 import { useChoseFetch } from "@/hooks/useChoseFetch";
 import useFetch from "@/hooks/useFetch";
 import { DiscoverMovieFilters } from "@/utils/queryBuilder";
@@ -90,13 +89,34 @@ export default function Index() {
     loading: WlLoading,
     error: WlError,
     refetch: refetchWl,
-  } = useFetch(() => getAllMoviesWithGenres(false, true));
+  } = useFetch(() =>
+    getLibraryPage("movie", 1, MOVIE_WL_FILTERS, EXPLORE_WL_LIMIT).then(
+      (r) => r.results,
+    ),
+  );
   const {
     data: TvWlData,
     loading: TvWlLoading,
     error: TvWlError,
     refetch: refetchTvWl,
-  } = useFetch(() => getAllSeriesWithGenres(false));
+  } = useFetch(() =>
+    getLibraryPage("tv", 1, TV_WL_FILTERS, EXPLORE_WL_LIMIT).then(
+      (r) => r.results,
+    ),
+  );
+
+  const EXPLORE_WL_LIMIT = 20;
+  // Old call: getAllMoviesWithGenres(false, true) → unwatched movies only.
+  const MOVIE_WL_FILTERS: LibraryFilters = {
+    ...defaultLibraryFilters(),
+    watched: "unwatched",
+  };
+  // TV server default order is added_at ASC (oldest first). Newest first here.
+  const TV_WL_FILTERS: LibraryFilters = {
+    ...defaultLibraryFilters(),
+    sortKey: "dateAdded" as LibrarySortKey,
+    sortDir: "desc",
+  };
 
   const {
     data: tvData,
@@ -315,6 +335,7 @@ export default function Index() {
               data={TvWlData}
               loading={TvWlLoading}
               error={TvWlError}
+              isLibrary={true}
             />
           </View>
         </View>

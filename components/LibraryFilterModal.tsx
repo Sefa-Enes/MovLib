@@ -178,7 +178,9 @@ export const LibraryFilterModal = ({
                 onPress={() => setDraft((d) => ({ ...d, ended: !d.ended }))}
                 className={chip(draft.ended)}
               >
-                <Text className="text-white text-xs font-semibold">Ended</Text>
+                <Text className="text-white text-xs font-semibold">
+                  Ended w.i.p.
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() =>

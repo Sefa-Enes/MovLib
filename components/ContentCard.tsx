@@ -66,6 +66,21 @@ const renderMovieProgressFade = () => {
     />
   );
 };
+const renderTvOnlyFade = () => {
+  return (
+    <View
+      // className="border-green-500 border-2 rounded-lg"
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: "100%",
+        backgroundColor: `rgba(0,0,0,0.7)`,
+      }}
+    />
+  );
+};
 
 const ContentCard = ({
   id,
@@ -118,7 +133,7 @@ const ContentCard = ({
 
   const cardImageIndicatorClass = (item: MediaItem) => {
     if (contentType === "tv") {
-      if (tvProgressRatio !== null && item.status === "Ended") {
+      if (isLibrary && item.status === "Ended") {
         return "border-2 border-purple-500 rounded-lg";
       }
       if (item.status === "In Production") {
@@ -230,10 +245,10 @@ const ContentCard = ({
   return (
     <TouchableOpacity
       onPress={handleRedirect}
-      className={`${isGrid ? "w-36" : "w-36 m-2"}  ${cardImageIndicatorClass(item)}`}
+      className={`${isGrid ? "w-36" : "w-36 m-2"}   `}
     >
       {/* 🔹 IMAGE WRAPPER */}
-      <View className="relative">
+      <View className={`relative  ${cardImageIndicatorClass(item)}`}>
         <Image
           source={{
             uri: poster_path
@@ -262,6 +277,14 @@ const ContentCard = ({
             className="absolute inset-0 rounded-lg overflow-hidden"
           >
             {renderMovieProgressFade()}
+          </View>
+        )}
+        {contentType === "tv" && !isLibrary && inWatchlist && (
+          <View
+            pointerEvents="none"
+            className="absolute inset-0 rounded-lg overflow-hidden"
+          >
+            {renderTvOnlyFade()}
           </View>
         )}
         {contentType === "tv" && tvProgressRatio !== null && (

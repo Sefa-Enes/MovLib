@@ -7,11 +7,13 @@ const SideScrollList = ({
   data,
   loading,
   error,
+  isLibrary = false,
 }: {
   contentType: string;
   data: any;
   loading: boolean;
   error: Error | null;
+  isLibrary?: boolean;
 }) => {
   if (loading) {
     return (
@@ -32,7 +34,12 @@ const SideScrollList = ({
       <FlatList
         data={data}
         renderItem={({ item }) => (
-          <ContentCard {...item} contentType={contentType} item={item} />
+          <ContentCard
+            {...item}
+            contentType={contentType}
+            item={item}
+            isLibrary={isLibrary}
+          />
         )}
         keyExtractor={(item) => item.id.toString()}
         horizontal
