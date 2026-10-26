@@ -21,7 +21,7 @@ import {
 export default function LibraryScreen() {
   const router = useRouter();
 
-  const [contentType, setContentType] = useState<"movie" | "tv">("movie");
+  const [contentType, setContentType] = useState<"movie" | "tv">("tv");
   const [refreshing, setRefreshing] = useState(false);
 
   const [filtersByType, setFiltersByType] = useState<
@@ -80,8 +80,8 @@ export default function LibraryScreen() {
       >
         <SegmentedControl
           segments={[
-            { key: "movie", label: "Movie" },
             { key: "tv", label: "TV" },
+            { key: "movie", label: "Movie" },
           ]}
           value={contentType}
           width={300}
@@ -105,6 +105,7 @@ export default function LibraryScreen() {
             data={data}
             loading={loading}
             error={error}
+            isLibrary={true}
           />
           {loadingMore && (
             <View className="py-6 items-center">

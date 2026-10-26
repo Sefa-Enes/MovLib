@@ -175,6 +175,12 @@ export const LibraryFilterModal = ({
                 </TouchableOpacity>
               ))}
               <TouchableOpacity
+                onPress={() => setDraft((d) => ({ ...d, ended: !d.ended }))}
+                className={chip(draft.ended)}
+              >
+                <Text className="text-white text-xs font-semibold">Ended</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
                 onPress={() =>
                   setDraft((d) => ({ ...d, favoritesOnly: !d.favoritesOnly }))
                 }

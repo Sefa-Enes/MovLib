@@ -11,12 +11,14 @@ const GridList = ({
   data,
   loading,
   error,
+  isLibrary = false,
   showButton = true,
 }: {
   contentType: "movie" | "tv";
   data: any;
   loading: boolean;
   error: Error | null;
+  isLibrary?: boolean;
   showButton?: boolean;
 }) => {
   if (loading) {
@@ -60,6 +62,7 @@ const GridList = ({
           {...item}
           contentType={contentType}
           isGrid={true}
+          isLibrary={isLibrary}
           item={item}
         />
       ))}

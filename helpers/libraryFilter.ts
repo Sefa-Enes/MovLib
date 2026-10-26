@@ -14,6 +14,7 @@ export interface LibraryFilters {
   sortDir: SortDirection;
   watched: "all" | "watched" | "unwatched";
   favoritesOnly: boolean;
+  ended: boolean;
   voteGte: number;
   voteLte: number;
   yearGte: number;
@@ -27,6 +28,7 @@ export const defaultLibraryFilters = (): LibraryFilters => ({
   sortDir: "desc",
   watched: "all",
   favoritesOnly: false,
+  ended: false,
   voteGte: VOTE_MIN,
   voteLte: VOTE_MAX,
   yearGte: YEAR_MIN,
@@ -39,6 +41,7 @@ export const hasActiveLibraryFilters = (f: LibraryFilters): boolean =>
   f.sortKey !== undefined ||
   f.watched !== "all" ||
   f.favoritesOnly ||
+  f.ended ||
   f.voteGte > VOTE_MIN ||
   f.voteLte < VOTE_MAX ||
   f.yearGte > YEAR_MIN ||
@@ -55,6 +58,7 @@ export function applyLibraryFilters<T extends LibraryItem>(
 
   const out = items.filter((i) => {
     if (f.favoritesOnly && !i.is_favorite) return false;
+    if (f.ended && !i.is_ended) return false;
 
     if (f.watched !== "all") {
       const w = isFullyWatched(i);
@@ -97,6 +101,7 @@ export function toLibraryQuery(f: LibraryFilters): string {
   if (f.watched !== "all")
     add("watched", f.watched === "watched" ? "true" : "false");
   if (f.favoritesOnly) add("favorite", "true");
+  if (f.ended) add("ended", "true");
   if (f.voteGte > VOTE_MIN) add("vote_gte", f.voteGte);
   if (f.voteLte < VOTE_MAX) add("vote_lte", f.voteLte);
   if (f.yearGte > YEAR_MIN) add("year_gte", f.yearGte);

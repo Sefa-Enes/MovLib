@@ -16,7 +16,7 @@ import { Image, Text, TouchableOpacity, View } from "react-native";
 
 type CardProps = MediaItem & {
   contentType?: "movie" | "tv";
-  showLabel?: boolean;
+  isLibrary?: boolean;
   isGrid?: boolean;
   routes?: string;
   item: MediaItem;
@@ -51,6 +51,21 @@ const renderTvProgressFade = (ratio: number) => {
     />
   );
 };
+const renderMovieProgressFade = () => {
+  return (
+    <View
+      // className="border-green-500 border-2 rounded-lg"
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: "100%",
+        backgroundColor: `rgba(0,0,0,0.7)`,
+      }}
+    />
+  );
+};
 
 const ContentCard = ({
   id,
@@ -62,7 +77,7 @@ const ContentCard = ({
   first_air_date,
   routes,
   contentType = "movie",
-  showLabel = false,
+  isLibrary = false, //
   isGrid = false,
   item,
   showButton = true,
@@ -101,6 +116,25 @@ const ContentCard = ({
     return Math.min(1, Math.max(0, (watched ?? 0) / total));
   }, [contentType, item]);
 
+  const cardImageIndicatorClass = (item: MediaItem) => {
+    if (contentType === "tv") {
+      if (tvProgressRatio !== null && item.status === "Ended") {
+        return "border-2 border-purple-500 rounded-lg";
+      }
+      if (item.status === "In Production") {
+        return "border-2 border-blue-500 rounded-lg";
+      }
+    }
+
+    if (contentType === "movie" && isWatched) {
+      return "border-2 border-purple-500 rounded-lg";
+    }
+    if (contentType === "movie" && inWatchlist && !isLibrary) {
+      return "border-2 border-yellow-500 rounded-lg";
+    }
+
+    return ""; // Varsayılan durum (border yok)
+  };
   const dbFns = useMemo(() => {
     if (contentType === "movie") {
       return {
@@ -196,7 +230,7 @@ const ContentCard = ({
   return (
     <TouchableOpacity
       onPress={handleRedirect}
-      className={isGrid ? "w-36" : "w-36 m-2"}
+      className={`${isGrid ? "w-36" : "w-36 m-2"}  ${cardImageIndicatorClass(item)}`}
     >
       {/* 🔹 IMAGE WRAPPER */}
       <View className="relative">
@@ -207,17 +241,29 @@ const ContentCard = ({
               : "https://placehold.co/600x400/1a1a1a/ffffff.png",
           }}
           resizeMode="cover"
-          className={
-            contentType === "tv" &&
-            tvProgressRatio !== null &&
-            item.status === "Ended"
-              ? "w-full h-56 rounded-lg border-2" + " border-purple-500"
-              : "w-full h-56 rounded-lg"
-          }
+          className={`w-full h-56 rounded-lg`}
         />
 
         {/* TV watched-ratio fade: clear bottom ↔ faded top, proportional to
             watched_episode_count / episode_count. */}
+        {contentType === "movie" &&
+          !isLibrary &&
+          (isWatched || inWatchlist) && (
+            <View
+              pointerEvents="none"
+              className="absolute inset-0 rounded-lg overflow-hidden"
+            >
+              {renderMovieProgressFade()}
+            </View>
+          )}
+        {contentType === "movie" && isLibrary && !isWatched && (
+          <View
+            pointerEvents="none"
+            className="absolute inset-0 rounded-lg overflow-hidden"
+          >
+            {renderMovieProgressFade()}
+          </View>
+        )}
         {contentType === "tv" && tvProgressRatio !== null && (
           <View
             pointerEvents="none"
@@ -240,16 +286,26 @@ const ContentCard = ({
           )}
 
         {contentType === "movie" && (
-          <View className="absolute top-2 right-2 rounded-lg flex-row items-center">
-            <TouchableOpacity
-              onPress={handleWatchedPress}
-              className={`rounded-lg p-1 ${
-                !isWatched ? "bg-secondary" : "bg-primary"
-              }`}
-            >
-              <Eye size={18} color={isWatched ? "white" : "lightgray"} />
-            </TouchableOpacity>
-          </View>
+          <>
+            <View className="absolute top-2 right-2 rounded-lg flex-row items-center">
+              <TouchableOpacity
+                onPress={handleWatchedPress}
+                className={`rounded-lg p-1 ${
+                  !isWatched ? "bg-secondary" : "bg-primary"
+                }`}
+              >
+                <Eye size={18} color={isWatched ? "white" : "lightgray"} />
+              </TouchableOpacity>
+            </View>
+            <View className="absolute bottom-2 left-2 rounded-lg flex-row items-center text-white text-sm">
+              {new Date(item.release_date as string).toLocaleDateString(
+                "tr-TR",
+                {
+                  year: "numeric",
+                },
+              )}
+            </View>
+          </>
         )}
 
         {/* 🔹 Grid görünüm alt overlay */}

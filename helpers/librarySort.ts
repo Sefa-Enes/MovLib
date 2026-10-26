@@ -19,6 +19,7 @@ export type LibraryItem = MediaItem & {
   last_watched_at?: string | null; // TV
   genre_names?: string[];
   is_favorite?: boolean;
+  is_ended?: boolean;
 };
 
 const titleOf = (i: LibraryItem) => i.title ?? i.name ?? "";
