@@ -255,6 +255,7 @@ export interface WatchingEpisode {
   episode_number: number;
   name: string;
   still_path: string | null;
+  id: number | null;
   air_date: string | null;
 }
 
@@ -263,5 +264,5 @@ export interface WatchingShow {
   name: string;
   poster_path: string | null;
   last_watched_at: string;
-  next_episode: WatchingEpisode;
+  next_episode: WatchingEpisode | null;
 }

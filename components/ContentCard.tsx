@@ -10,9 +10,10 @@ import {
 import { MediaItem, Movie, Tv } from "@/interface/interfaces";
 import { fetchTvDetails } from "@/services/api";
 import { Href, router } from "expo-router";
-import { Check, Eye, Hourglass, Plus, Star } from "lucide-react-native";
+import { Check, Eye, Plus, Star } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
+import twColors from "tailwindcss/colors";
 
 type CardProps = MediaItem & {
   contentType?: "movie" | "tv";
@@ -51,36 +52,6 @@ const renderTvProgressFade = (ratio: number) => {
     />
   );
 };
-const renderMovieProgressFade = () => {
-  return (
-    <View
-      // className="border-green-500 border-2 rounded-lg"
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        height: "100%",
-        backgroundColor: `rgba(0,0,0,0.7)`,
-      }}
-    />
-  );
-};
-const renderTvOnlyFade = () => {
-  return (
-    <View
-      // className="border-green-500 border-2 rounded-lg"
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        height: "100%",
-        backgroundColor: `rgba(0,0,0,0.7)`,
-      }}
-    />
-  );
-};
 
 const ContentCard = ({
   id,
@@ -99,7 +70,35 @@ const ContentCard = ({
 }: CardProps) => {
   const { setMediaObject } = useMediaContext();
   const pathHead = contentType === "tv" ? "tv" : "movies";
-
+  const renderTvOnlyFade = () => {
+    return (
+      <View
+        // className="border-green-500 border-2 rounded-lg"
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "100%",
+          backgroundColor: `rgba(0,0,0,${0.2})`,
+        }}
+      />
+    );
+  };
+  const renderMovieProgressFade = () => {
+    return (
+      <View
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "100%",
+          backgroundColor: `rgba(0,0,0,${isLibrary ? 0.5 : 0.2})`,
+        }}
+      />
+    );
+  };
   // Option 3: the TMDB proxy annotates every catalog item with in_library
   // (movies + TV) and is_watched (movies only). The card reads them directly
   // — the old per-card getMovieById/getTvShowById fetch (N+1) is gone.
@@ -141,14 +140,43 @@ const ContentCard = ({
       }
     }
 
+    if (
+      contentType === "tv" &&
+      tvProgressRatio === 1 &&
+      item.status !== "Ended"
+    ) {
+      return "border-2 border-yellow-500 rounded-lg";
+    }
     if (contentType === "movie" && isWatched) {
       return "border-2 border-purple-500 rounded-lg";
     }
     if (contentType === "movie" && inWatchlist && !isLibrary) {
       return "border-2 border-yellow-500 rounded-lg";
     }
+    if (contentType === "tv" && inWatchlist && !isLibrary) {
+      return "border-2 border-yellow-500 rounded-lg";
+    }
 
     return ""; // Varsayılan durum (border yok)
+  };
+  const cardIndicatorColor = (item: MediaItem): string | null => {
+    if (contentType === "tv") {
+      if (isLibrary && item.status === "Ended") return twColors.purple[400];
+      if (item.status === "In Production") return twColors.blue[500];
+    }
+    if (
+      contentType === "tv" &&
+      tvProgressRatio === 1 &&
+      item.status !== "Ended"
+    ) {
+      return twColors.yellow[500];
+    }
+    if (contentType === "movie" && isWatched) return twColors.purple[400];
+    if (contentType === "movie" && inWatchlist && !isLibrary)
+      return twColors.yellow[500];
+    if (contentType === "tv" && inWatchlist && !isLibrary)
+      return twColors.yellow[500];
+    return null;
   };
   const dbFns = useMemo(() => {
     if (contentType === "movie") {
@@ -242,13 +270,25 @@ const ContentCard = ({
     setMediaObject(item);
     router.push(`/${pathHead}/${id}` as Href);
   };
+  const glowColor = cardIndicatorColor(item);
   return (
     <TouchableOpacity
       onPress={handleRedirect}
       className={`${isGrid ? "w-36" : "w-36 m-2"}   `}
     >
       {/* 🔹 IMAGE WRAPPER */}
-      <View className={`relative  ${cardImageIndicatorClass(item)}`}>
+      <View
+        className={`relative `}
+        style={
+          glowColor
+            ? {
+                borderRadius: 8, // = rounded-lg, the glow follows this shape
+                // offsetX offsetY blur spread color(+alpha B3 ≈ 0.7)
+                boxShadow: `0 0 14px 2px ${glowColor}B3`,
+              }
+            : undefined
+        }
+      >
         <Image
           source={{
             uri: poster_path
@@ -261,16 +301,14 @@ const ContentCard = ({
 
         {/* TV watched-ratio fade: clear bottom ↔ faded top, proportional to
             watched_episode_count / episode_count. */}
-        {contentType === "movie" &&
-          !isLibrary &&
-          (isWatched || inWatchlist) && (
-            <View
-              pointerEvents="none"
-              className="absolute inset-0 rounded-lg overflow-hidden"
-            >
-              {renderMovieProgressFade()}
-            </View>
-          )}
+        {contentType === "movie" && !isLibrary && !inWatchlist && (
+          <View
+            pointerEvents="none"
+            className="absolute inset-0 rounded-lg overflow-hidden"
+          >
+            {renderMovieProgressFade()}
+          </View>
+        )}
         {contentType === "movie" && isLibrary && !isWatched && (
           <View
             pointerEvents="none"
@@ -279,7 +317,7 @@ const ContentCard = ({
             {renderMovieProgressFade()}
           </View>
         )}
-        {contentType === "tv" && !isLibrary && inWatchlist && (
+        {contentType === "tv" && !isLibrary && !inWatchlist && (
           <View
             pointerEvents="none"
             className="absolute inset-0 rounded-lg overflow-hidden"
@@ -295,7 +333,7 @@ const ContentCard = ({
             {renderTvProgressFade(tvProgressRatio)}
           </View>
         )}
-        {contentType === "tv" &&
+        {/* {contentType === "tv" &&
           tvProgressRatio === 1 &&
           item.status !== "Ended" && (
             <View
@@ -306,8 +344,14 @@ const ContentCard = ({
                 <Hourglass size={24} color="rgba(255,255,255,0.6)" />
               </View>
             </View>
-          )}
+          )} */}
 
+        {cardImageIndicatorClass(item) !== "" && (
+          <View
+            pointerEvents="none"
+            className={`absolute inset-0 ${cardImageIndicatorClass(item)}`}
+          />
+        )}
         {contentType === "movie" && (
           <>
             <View className="absolute top-2 right-2 rounded-lg flex-row items-center">

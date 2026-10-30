@@ -64,7 +64,7 @@ export default function LibraryScreen() {
       />
 
       <ScrollView
-        className="flex-1 px-5 w-full mt-10"
+        className="flex-1 px-5 w-full "
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ minHeight: "100%", paddingBottom: 10 }}
         onScroll={onScroll}

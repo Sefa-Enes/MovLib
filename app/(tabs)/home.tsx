@@ -3,7 +3,7 @@ import NextEpisodeCard from "@/components/NextEpisodeCard";
 import {
   getWatchingAwhileShows,
   getWatchingShows,
-  toggleEpisodeWatched,
+  setEpisodesWatched,
 } from "@/helpers/databaseHelper";
 import useFetch from "@/hooks/useFetch";
 import { WatchingShow } from "@/interface/interfaces";
@@ -57,16 +57,23 @@ export default function Home() {
   const onMarkWatched = useCallback(
     async (show: WatchingShow) => {
       const ep = show.next_episode;
+      if (!ep) return;
+      // Batch endpoint validates by TMDB episode id. Legacy rows may lack it.
+      if (ep.id == null) {
+        console.warn(
+          `Mark watched skipped: no TMDB episode id (tv ${show.id} S${ep.season_number}E${ep.episode_number})`,
+        );
+        return;
+      }
       setBusyId(show.id);
       try {
-        await toggleEpisodeWatched({
-          tvId: show.id,
-          seasonNumber: ep.season_number,
-          episodeNumber: ep.episode_number,
-          watched: true,
-        });
-        await refetch(); // server returns the next episode (or drops the show)
-        await refetchAwhile(); // server returns the next episode (or drops the show)
+        // Backend marks the episode, upserts the next one as unwatched and
+        // bumps watched_at, so the show moves Awhile -> Watching.
+        await setEpisodesWatched(show.id, [
+          { id: ep.id, season_number: ep.season_number, watched: true },
+        ]);
+        // Both lists can change (show leaves Awhile, enters Watching).
+        await Promise.all([refetch(), refetchAwhile()]);
       } catch (e) {
         console.error("Mark watched error:", e);
       } finally {
