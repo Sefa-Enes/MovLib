@@ -274,7 +274,7 @@ const ContentCard = ({
   return (
     <TouchableOpacity
       onPress={handleRedirect}
-      className={`${isGrid ? "w-36" : "w-36 m-2"}   `}
+      className={`${isGrid ? "w-36 " : "w-36 m-2 mt-4"}   `}
     >
       {/* 🔹 IMAGE WRAPPER */}
       <View
@@ -296,7 +296,7 @@ const ContentCard = ({
               : "https://placehold.co/600x400/1a1a1a/ffffff.png",
           }}
           resizeMode="cover"
-          className={`w-full h-56 rounded-lg`}
+          className={`w-full h-56 rounded-lg `}
         />
 
         {/* TV watched-ratio fade: clear bottom ↔ faded top, proportional to

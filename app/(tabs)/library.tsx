@@ -90,7 +90,7 @@ export default function LibraryScreen() {
 
         <View className="mb-20 mt-5">
           <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-lg text-accent font-bold">Watchlist</Text>
+            <Text className="text-lg text-accent font-bold">Library</Text>
             <LibraryFilterModal
               contentType={contentType}
               filters={filtersByType[contentType]}
