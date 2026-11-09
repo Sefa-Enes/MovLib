@@ -365,12 +365,14 @@ const ContentCard = ({
               </TouchableOpacity>
             </View>
             <View className="absolute bottom-2 left-2 rounded-lg flex-row items-center text-white text-sm">
-              {new Date(item.release_date as string).toLocaleDateString(
-                "tr-TR",
-                {
-                  year: "numeric",
-                },
-              )}
+              <Text className="text-white font-bold text-xs ">
+                {new Date(item.release_date as string).toLocaleDateString(
+                  "tr-TR",
+                  {
+                    year: "numeric",
+                  },
+                )}
+              </Text>
             </View>
           </>
         )}

@@ -139,7 +139,8 @@ export default function Home() {
                 />
               ))}
             </View>
-          )}{" "}
+          )}
+          {<Text> </Text>}
         </View>
         <View id="watchedAwhile">
           <Text className="text-lg text-accent font-bold">
@@ -180,7 +181,8 @@ export default function Home() {
                 />
               ))}
             </View>
-          )}{" "}
+          )}
+          {<Text> </Text>}
         </View>
       </ScrollView>
     </View>

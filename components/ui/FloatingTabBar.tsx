@@ -46,7 +46,7 @@ export function FloatingTabBar({
   const [trackWidth, setTrackWidth] = useState(0);
   const translateX = useSharedValue(0);
   const hasSettled = useRef(false);
-
+  const showLabels = trackWidth >= 450;
   const pillWidth = trackWidth > 0 ? trackWidth / state.routes.length : 0;
 
   useEffect(() => {
@@ -133,6 +133,7 @@ export function FloatingTabBar({
             <TabButton
               key={route.key}
               focused={focused}
+              showLabels={showLabels}
               label={options.title ?? route.name}
               renderIcon={options.tabBarIcon as IconRenderer}
               onPress={onPress}
@@ -146,12 +147,19 @@ export function FloatingTabBar({
 
 type TabButtonProps = {
   focused: boolean;
+  showLabels: boolean;
   label: string;
   renderIcon: IconRenderer;
   onPress: () => void;
 };
 
-function TabButton({ focused, label, renderIcon, onPress }: TabButtonProps) {
+function TabButton({
+  focused,
+  showLabels,
+  label,
+  renderIcon,
+  onPress,
+}: TabButtonProps) {
   return (
     <Pressable
       onPress={onPress}
@@ -169,7 +177,7 @@ function TabButton({ focused, label, renderIcon, onPress }: TabButtonProps) {
     >
       {renderIcon({ focused, color: ICON_COLOR, size: ICON_SIZE })}
 
-      {focused ? (
+      {focused && showLabels ? (
         <Animated.Text
           entering={FadeIn.duration(180)}
           exiting={FadeOut.duration(120)}

@@ -36,7 +36,7 @@ const NextEpisodeCard = ({ item, busy = false, onMarkWatched }: Props) => {
     >
       <Image
         source={{
-          uri: ep.still_path
+          uri: ep?.still_path
             ? `https://image.tmdb.org/t/p/w300${ep.still_path}`
             : "https://placehold.co/600x400/1a1a1a/ffffff.png",
         }}
@@ -49,7 +49,7 @@ const NextEpisodeCard = ({ item, busy = false, onMarkWatched }: Props) => {
         </Text>
         <View className="flex-row items-center justify-between mt-1">
           <Text numberOfLines={1} className="text-gray-50 text-xs flex-1 mr-2">
-            {`S${ep.season_number}/E${ep.episode_number} · ${ep.name}`}
+            {`S${ep?.season_number}/E${ep?.episode_number} · ${ep?.name}`}
           </Text>
           <TouchableOpacity
             disabled={busy}

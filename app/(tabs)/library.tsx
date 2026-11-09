@@ -78,6 +78,7 @@ export default function LibraryScreen() {
           />
         }
       >
+        <View className="mt-20" />
         <SegmentedControl
           segments={[
             { key: "tv", label: "TV" },
