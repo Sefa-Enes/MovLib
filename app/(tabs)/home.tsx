@@ -9,14 +9,19 @@ import useFetch from "@/hooks/useFetch";
 import { WatchingShow } from "@/interface/interfaces";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, RefreshControl, Text } from "react-native";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  Text,
+  useWindowDimensions,
+} from "react-native";
 // app/(tabs)/index.tsx  — imports
 import { Image, ScrollView, View } from "react-native";
 export default function Home() {
   const COLUMN_GAP = 12; // horizontal space between cards
   const ROW_GAP = 12; // vertical space between rows
   const router = useRouter();
-
+  const width = useWindowDimensions().width;
   // n * CARD_WIDTH + (n - 1) * COLUMN_GAP <= availableWidth
 
   // const {
@@ -30,9 +35,10 @@ export default function Home() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const onRefresh = useCallback(async () => {
+    console.log(width);
     console.log("onrefresh");
     setRefreshing(true);
-    refetch();
+    refetchWatching();
     refetchAwhile();
     setTimeout(() => {
       setRefreshKey((k) => k + 1);
@@ -44,7 +50,7 @@ export default function Home() {
     data: watching,
     loading,
     error,
-    refetch,
+    refetch: refetchWatching,
   } = useFetch(getWatchingShows);
   const [busyId, setBusyId] = useState<number | null>(null);
   const {
@@ -73,14 +79,14 @@ export default function Home() {
           { id: ep.id, season_number: ep.season_number, watched: true },
         ]);
         // Both lists can change (show leaves Awhile, enters Watching).
-        await Promise.all([refetch(), refetchAwhile()]);
+        await Promise.all([refetchWatching(), refetchAwhile()]);
       } catch (e) {
         console.error("Mark watched error:", e);
       } finally {
         setBusyId(null);
       }
     },
-    [refetch, refetchAwhile],
+    [refetchWatching, refetchAwhile],
   );
 
   return (
@@ -104,7 +110,7 @@ export default function Home() {
           />
         }
       >
-        <View id="watching">
+        <View id="watching" className="mt-20">
           <Text className="text-lg text-accent font-bold mt-5">Watching</Text>
           {loading && !watching ? (
             <ActivityIndicator
@@ -120,7 +126,7 @@ export default function Home() {
             </Text>
           ) : (
             <View
-              className="mt-5"
+              className="mt-20"
               style={{
                 flexDirection: "row",
                 flexWrap: "wrap",

@@ -18,6 +18,7 @@ export default function Index() {
     data: movieData,
     loading: movieLoading,
     error: movieError,
+    refetch: refetchMovie,
   } = useChoseFetch("movie");
 
   const fantasyFilters = useMemo(
@@ -32,6 +33,7 @@ export default function Index() {
     data: fantasyMovieData,
     loading: fantasyMovieLoading,
     error: fantasyMovieError,
+    refetch: refetchFantasyMovie,
   } = useChoseFetch("movie", undefined, fantasyFilters as DiscoverMovieFilters);
 
   const horrorFilters = useMemo(
@@ -45,6 +47,7 @@ export default function Index() {
     data: horrorMovieData,
     loading: horrorMovieLoading,
     error: horrorMovieError,
+    refetch: refetchHorrorMovie,
   } = useChoseFetch("movie", undefined, horrorFilters as DiscoverMovieFilters);
 
   const scifiFilters = useMemo(
@@ -58,6 +61,7 @@ export default function Index() {
     data: scifiMovieData,
     loading: scifiMovieLoading,
     error: scifiMovieError,
+    refetch: refetchScifiMovie,
   } = useChoseFetch("movie", undefined, scifiFilters as DiscoverMovieFilters);
 
   const animationFilters = useMemo(
@@ -72,6 +76,7 @@ export default function Index() {
     data: animationMovieData,
     loading: animationMovieLoading,
     error: animationMovieError,
+    refetch: refetchAnimationMovie,
   } = useChoseFetch(
     "movie",
     undefined,
@@ -122,11 +127,13 @@ export default function Index() {
     data: tvData,
     loading: tvLoading,
     error: tvError,
+    refetch: refetchTv,
   } = useChoseFetch("tv");
   const {
     data: animationTVData,
     loading: animationTVLoading,
     error: animationTVError,
+    refetch: refetchAnimationTV,
   } = useChoseFetch(
     "tv",
     undefined,
@@ -142,6 +149,7 @@ export default function Index() {
     data: FantasyTVData,
     loading: FantasyTVLoading,
     error: FantasyTVError,
+    refetch: refetchFantasyTV,
   } = useChoseFetch(
     "tv",
     undefined,
@@ -157,6 +165,7 @@ export default function Index() {
     data: ComedyTVData,
     loading: ComedyTVLoading,
     error: ComedyTVError,
+    refetch: refetchComedyTV,
   } = useChoseFetch(
     "tv",
     undefined,
@@ -171,15 +180,49 @@ export default function Index() {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // const onRefresh = useCallback(async () => {
+  //   console.log("onrefresh");
+  //   setRefreshing(true);
+  //   setTimeout(() => {
+  //     setRefreshKey((k) => k + 1);
+  //     setRefreshing(false);
+  //   }, 500);
+  // }, []);
   const onRefresh = useCallback(async () => {
-    console.log("onrefresh");
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshKey((k) => k + 1);
+    try {
+      const results = await Promise.allSettled([
+        refetchMovie(),
+        refetchTv(),
+        refetchFantasyMovie(),
+        refetchHorrorMovie(),
+        refetchScifiMovie(),
+        refetchAnimationMovie(),
+        refetchAnimationTV(),
+        refetchFantasyTV(),
+        refetchComedyTV(),
+        refetchWl(),
+        refetchTvWl(),
+      ]);
+      results.forEach((r) => {
+        if (r.status === "rejected") console.warn("refresh failed:", r.reason);
+      });
+    } finally {
       setRefreshing(false);
-    }, 500);
-  }, []);
-
+    }
+  }, [
+    refetchMovie,
+    refetchTv,
+    refetchFantasyMovie,
+    refetchHorrorMovie,
+    refetchScifiMovie,
+    refetchAnimationMovie,
+    refetchAnimationTV,
+    refetchFantasyTV,
+    refetchComedyTV,
+    refetchWl,
+    refetchTvWl,
+  ]);
   return (
     <View className="flex-1 bg-dark-200 ">
       <Image
@@ -188,7 +231,7 @@ export default function Index() {
         resizeMode="cover"
       />
       <ScrollView
-        className="flex-1 px-5 w-full"
+        className="flex-1  px-2 w-full"
         key={refreshKey}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ minHeight: "100%", paddingBottom: 10 }}
@@ -214,7 +257,7 @@ export default function Index() {
           onChangeText={function (text: string): void {}}
         /> */}
         <View className="mb-20">
-          <View className="flex-1 mt-5">
+          <View className=" mt-20">
             <>
               <Text className="text-lg text-accent font-bold mt-5 ">
                 Trending Movies
@@ -227,7 +270,7 @@ export default function Index() {
               />
             </>
           </View>
-          <View className="flex-1 mt-5">
+          <View className=" mt-5">
             <Text className="text-lg text-accent font-bold mt-5">
               Trending Series
             </Text>
@@ -238,7 +281,7 @@ export default function Index() {
               error={tvError}
             />
           </View>
-          <View className="flex-1 mt-5">
+          <View className=" mt-5">
             <Text className="text-lg text-accent font-bold mt-5">
               Trending Horror Movies
             </Text>
@@ -249,7 +292,7 @@ export default function Index() {
               error={horrorMovieError}
             />
           </View>
-          <View className="flex-1 mt-5">
+          <View className=" mt-5">
             <Text className="text-lg text-accent font-bold mt-5">
               Trendling Sci-Fi Movies
             </Text>
@@ -260,7 +303,7 @@ export default function Index() {
               error={scifiMovieError}
             />
           </View>
-          <View className="flex-1 mt-5">
+          <View className=" mt-5">
             <Text className="text-lg text-accent font-bold mt-5">
               Trending Fantasy Movies
             </Text>
@@ -271,7 +314,7 @@ export default function Index() {
               error={fantasyMovieError}
             />
           </View>
-          <View className="flex-1 mt-5">
+          <View className=" mt-5">
             <Text className="text-lg text-accent font-bold mt-5">
               Trending Animation Movies
             </Text>
@@ -282,7 +325,7 @@ export default function Index() {
               error={animationMovieError}
             />
           </View>
-          <View className="flex-1 mt-5">
+          <View className=" mt-5">
             <Text className="text-lg text-accent font-bold mt-5">
               Trending Animated Series
             </Text>
@@ -293,7 +336,7 @@ export default function Index() {
               error={animationTVError}
             />
           </View>
-          <View className="flex-1 mt-5">
+          <View className=" mt-5">
             <Text className="text-lg text-accent font-bold mt-5">
               Trending Fantasy & Sci-Fi Series
             </Text>
@@ -304,7 +347,7 @@ export default function Index() {
               error={FantasyTVError}
             />
           </View>
-          <View className="flex-1 mt-5">
+          <View className=" mt-5">
             <Text className="text-lg text-accent font-bold mt-5">
               Trending Comedy Series
             </Text>
@@ -315,7 +358,7 @@ export default function Index() {
               error={ComedyTVError}
             />
           </View>
-          <View className="flex-1 mt-5">
+          <View className=" mt-5">
             <Text className="text-lg text-accent font-bold mt-5">
               Movie Watchlist
             </Text>
@@ -326,7 +369,7 @@ export default function Index() {
               error={WlError}
             />
           </View>
-          <View className="flex-1 mt-5">
+          <View className=" mt-5">
             <Text className="text-lg text-accent font-bold mt-5">
               Series Watchlist
             </Text>

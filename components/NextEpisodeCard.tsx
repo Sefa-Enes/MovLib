@@ -8,10 +8,33 @@ import {
   Image,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 
 export const CARD_WIDTH = 256;
+export const NARROW_BREAKPOINT = 420;
+// Parent layout values. They must match the list container.
+export const LIST_HORIZONTAL_PADDING = 20; // px-5
+export const COLUMN_GAP = 12;
+const INFO_HEIGHT = 80; // old h-56 (224) - h-36 (144)
+
+// Shared hook: the parent list uses the same values for numColumns/gap.
+export const useNextEpisodeCardLayout = () => {
+  const { width: screenWidth } = useWindowDimensions();
+  const isNarrow = screenWidth < NARROW_BREAKPOINT;
+  const cardWidth = isNarrow
+    ? Math.floor((screenWidth - LIST_HORIZONTAL_PADDING * 2 - COLUMN_GAP) / 2)
+    : CARD_WIDTH;
+  const imageHeight = Math.round((cardWidth * 9) / 16); // 256 -> 144 (h-36)
+  return {
+    isNarrow,
+    numColumns: isNarrow ? 2 : 1,
+    cardWidth,
+    imageHeight,
+    cardHeight: imageHeight + INFO_HEIGHT,
+  };
+};
 
 interface Props {
   item: WatchingShow;
@@ -21,6 +44,7 @@ interface Props {
 
 const NextEpisodeCard = ({ item, busy = false, onMarkWatched }: Props) => {
   const ep = item.next_episode;
+  const { cardWidth, imageHeight, cardHeight } = useNextEpisodeCardLayout();
   const handleRedirect = async () => {
     // setMediaObject(item);
     router.push(`/tv/${item.id}` as Href);
@@ -29,10 +53,11 @@ const NextEpisodeCard = ({ item, busy = false, onMarkWatched }: Props) => {
     <TouchableOpacity
       onPress={handleRedirect}
       style={{
-        width: CARD_WIDTH,
+        width: cardWidth,
+        height: cardHeight,
         maxWidth: "100%", // never wider than parent on very narrow screens
       }}
-      className="h-56 bg-slate-700 rounded-lg overflow-hidden"
+      className="bg-slate-700 rounded-lg overflow-hidden"
     >
       <Image
         source={{
@@ -41,7 +66,8 @@ const NextEpisodeCard = ({ item, busy = false, onMarkWatched }: Props) => {
             : "https://placehold.co/600x400/1a1a1a/ffffff.png",
         }}
         resizeMode="cover"
-        className="w-full h-36"
+        className="w-full"
+        style={{ height: imageHeight }}
       />
       <View className="px-2">
         <Text numberOfLines={1} className="text-white text-sm font-bold mt-2">

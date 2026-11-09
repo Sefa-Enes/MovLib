@@ -30,7 +30,7 @@ const SideScrollList = ({
 
   const pathHead = contentType === "tv" ? "tv" : "movies";
   return (
-    <View className="flex-1 mt-5">
+    <View className="flex-1  ">
       <FlatList
         data={data}
         renderItem={({ item }) => (

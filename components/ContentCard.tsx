@@ -12,7 +12,13 @@ import { fetchTvDetails } from "@/services/api";
 import { Href, router } from "expo-router";
 import { Check, Eye, Plus, Star } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
-import { Image, Text, TouchableOpacity, View } from "react-native";
+import {
+  Image,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import twColors from "tailwindcss/colors";
 
 type CardProps = MediaItem & {
@@ -271,10 +277,13 @@ const ContentCard = ({
     router.push(`/${pathHead}/${id}` as Href);
   };
   const glowColor = cardIndicatorColor(item);
+  const screenWidth = useWindowDimensions().width;
+  const width = screenWidth < 420 ? 32 : 36;
+  const height = screenWidth < 420 ? 52 : 56; // Sabit yükseklik
   return (
     <TouchableOpacity
       onPress={handleRedirect}
-      className={`${isGrid ? "w-36 " : "w-36 m-2 mt-4"}   `}
+      className={`${isGrid ? `w-${width} ` : `w-${width} m-2 mt-4`}   `}
     >
       {/* 🔹 IMAGE WRAPPER */}
       <View
@@ -296,7 +305,7 @@ const ContentCard = ({
               : "https://placehold.co/600x400/1a1a1a/ffffff.png",
           }}
           resizeMode="cover"
-          className={`w-full h-56 rounded-lg `}
+          className={`w-full h-${height} rounded-lg `}
         />
 
         {/* TV watched-ratio fade: clear bottom ↔ faded top, proportional to
@@ -380,7 +389,6 @@ const ContentCard = ({
             </View>
           </>
         )}
-
         {/* 🔹 Grid görünüm alt overlay */}
         {isGrid && (
           <>

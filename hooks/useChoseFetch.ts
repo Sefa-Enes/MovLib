@@ -34,5 +34,5 @@ export const useChoseFetch = (
     return () => clearTimeout(timeoutId); // sadece type değişince manuel fetch
   }, [type, query, filters]);
 
-  return { data, loading, error };
+  return { data, loading, error, refetch };
 };
