@@ -364,6 +364,10 @@ const ContentCard = ({
                 <Eye size={18} color={isWatched ? "white" : "lightgray"} />
               </TouchableOpacity>
             </View>
+          </>
+        )}
+        {isGrid && contentType === "movie" && (
+          <>
             <View className="absolute bottom-2 left-2 rounded-lg flex-row items-center text-white text-sm">
               <Text className="text-white font-bold text-xs ">
                 {new Date(item.release_date as string).toLocaleDateString(
@@ -390,7 +394,7 @@ const ContentCard = ({
                 {inWatchlist ? (
                   <Check size={18} color="white" />
                 ) : (
-                  <Plus size={18} className="text-accent" />
+                  <Plus size={18} color="lightgrey" />
                 )}
               </TouchableOpacity>
             </View>
@@ -437,7 +441,7 @@ const ContentCard = ({
               {inWatchlist ? (
                 <Check size={18} color="white" />
               ) : (
-                <Plus size={18} className="text-accent" />
+                <Plus size={18} color="lightgrey" />
               )}
             </TouchableOpacity>
           </View>
