@@ -216,8 +216,7 @@ export const fetchSimilar = async ({
   const data = await response.json();
   return data.results;
 };
-
-export const addToWatchList = async ({
+export const fetchRecommendations = async ({
   contentType = "movie",
 
   id,
@@ -225,7 +224,7 @@ export const addToWatchList = async ({
   contentType?: "movie" | "tv";
   id: number;
 }): Promise<MediaItem[]> => {
-  const endpoint = `${TMDB_CONFIG.BASE_URL}/${contentType}/${id}/similar?language=en-US&sort_by=popularity.desc&page=1`;
+  const endpoint = `${TMDB_CONFIG.BASE_URL}/${contentType}/${id}/recommendations?language=en-US&sort_by=popularity.desc&page=1`;
 
   const response = await fetch(endpoint, {
     method: "GET",
@@ -239,6 +238,29 @@ export const addToWatchList = async ({
   const data = await response.json();
   return data.results;
 };
+
+// export const addToWatchList = async ({
+//   contentType = "movie",
+
+//   id,
+// }: {
+//   contentType?: "movie" | "tv";
+//   id: number;
+// }): Promise<MediaItem[]> => {
+//   const endpoint = `${TMDB_CONFIG.BASE_URL}/${contentType}/${id}/similar?language=en-US&sort_by=popularity.desc&page=1`;
+
+//   const response = await fetch(endpoint, {
+//     method: "GET",
+//     headers: TMDB_CONFIG.headers,
+//   });
+
+//   if (!response.ok) {
+//     throw new Error(`Failed to fetch series: ${response.statusText}`);
+//   }
+
+//   const data = await response.json();
+//   return data.results;
+// };
 
 export const fetchCompany = async ({
   id = 0,

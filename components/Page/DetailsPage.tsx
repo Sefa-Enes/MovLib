@@ -11,7 +11,11 @@ import {
 } from "@/helpers/databaseHelper";
 import useFetch from "@/hooks/useFetch";
 import { MediaItem, Movie, Tv, WatchedTvEpisode } from "@/interface/interfaces";
-import { fetchSimilar, fetchTvSeasonEpisodes } from "@/services/api";
+import {
+  fetchRecommendations,
+  fetchSimilar,
+  fetchTvSeasonEpisodes,
+} from "@/services/api";
 import { isEpisodeAired } from "@/utils/episodeHelpers";
 import { DiscoverMovieFilters } from "@/utils/queryBuilder";
 import { router } from "expo-router";
@@ -64,6 +68,19 @@ const DetailsPage = ({
   } = useFetch(
     () =>
       fetchSimilar({ contentType: contentType, id: Number(mediaObject?.id) }),
+    false,
+  );
+  const {
+    data: recommendationsData,
+    loading: recommendationsLoading,
+    error: recommendationsError,
+    refetch: refetchRecommend,
+  } = useFetch(
+    () =>
+      fetchRecommendations({
+        contentType: contentType,
+        id: Number(mediaObject?.id),
+      }),
     false,
   );
   const [detailDrawer, setDetailDrawer] = useState<boolean>(false);
@@ -346,6 +363,7 @@ const DetailsPage = ({
   useEffect(() => {
     if (mediaObject?.id) {
       refetch();
+      refetchRecommend();
     }
   }, [mediaObject?.id, contentType]);
   // components/DetailsPage/DetailsPage.tsx
@@ -683,15 +701,28 @@ const DetailsPage = ({
         <Divider dividerStyle={{ marginTop: 10, marginBottom: 10 }} />
         <View className="flex-1 mt-5">
           <>
-            <Text className="text-lg text-accent font-bold mt-5 ">
-              Similar Content
-            </Text>
-            <SideScrollList
-              contentType={contentType}
-              data={similarData}
-              loading={similarLoading}
-              error={similarError}
-            />
+            <View>
+              <Text className="text-lg text-accent font-bold mt-5 ">
+                Recommended Content
+              </Text>
+              <SideScrollList
+                contentType={contentType}
+                data={recommendationsData}
+                loading={recommendationsLoading}
+                error={recommendationsError}
+              />
+            </View>
+            <View>
+              <Text className="text-lg text-accent font-bold mt-5 ">
+                Similar Content
+              </Text>
+              <SideScrollList
+                contentType={contentType}
+                data={similarData}
+                loading={similarLoading}
+                error={similarError}
+              />
+            </View>
           </>
         </View>
       </ScrollView>

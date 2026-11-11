@@ -141,25 +141,24 @@ const ContentCard = ({
       if (isLibrary && item.status === "Ended") {
         return "border-2 border-purple-500 rounded-lg";
       }
+      if (isLibrary && item.status === "Canceled") {
+        return "border-2 border-red-500 rounded-lg";
+      }
       if (item.status === "In Production") {
         return "border-2 border-blue-500 rounded-lg";
       }
+      if (tvProgressRatio === 1 && item.status !== "Ended") {
+        return "border-2 border-yellow-500 rounded-lg";
+      }
+      if (inWatchlist && !isLibrary) {
+        return "border-2 border-yellow-500 rounded-lg";
+      }
     }
 
-    if (
-      contentType === "tv" &&
-      tvProgressRatio === 1 &&
-      item.status !== "Ended"
-    ) {
-      return "border-2 border-yellow-500 rounded-lg";
-    }
     if (contentType === "movie" && isWatched) {
       return "border-2 border-purple-500 rounded-lg";
     }
     if (contentType === "movie" && inWatchlist && !isLibrary) {
-      return "border-2 border-yellow-500 rounded-lg";
-    }
-    if (contentType === "tv" && inWatchlist && !isLibrary) {
       return "border-2 border-yellow-500 rounded-lg";
     }
 
@@ -167,20 +166,15 @@ const ContentCard = ({
   };
   const cardIndicatorColor = (item: MediaItem): string | null => {
     if (contentType === "tv") {
-      if (isLibrary && item.status === "Ended") return twColors.purple[400];
       if (item.status === "In Production") return twColors.blue[500];
-    }
-    if (
-      contentType === "tv" &&
-      tvProgressRatio === 1 &&
-      item.status !== "Ended"
-    ) {
-      return twColors.yellow[500];
+      if (inWatchlist && !isLibrary) return twColors.yellow[500];
+      if (isLibrary && item.status === "Ended") return twColors.purple[400];
+      if (isLibrary && item.status === "Canceled") return twColors.red[400];
+      if (isLibrary && tvProgressRatio === 1 && item.status !== "Ended")
+        return twColors.yellow[500];
     }
     if (contentType === "movie" && isWatched) return twColors.purple[400];
     if (contentType === "movie" && inWatchlist && !isLibrary)
-      return twColors.yellow[500];
-    if (contentType === "tv" && inWatchlist && !isLibrary)
       return twColors.yellow[500];
     return null;
   };
@@ -276,14 +270,14 @@ const ContentCard = ({
     setMediaObject(item);
     router.push(`/${pathHead}/${id}` as Href);
   };
-  const glowColor = cardIndicatorColor(item);
   const screenWidth = useWindowDimensions().width;
-  const width = screenWidth < 420 ? 32 : 36;
-  const height = screenWidth < 420 ? 52 : 56; // Sabit yükseklik
+  const width = screenWidth < 420 ? "w-32" : "w-36";
+  const height = screenWidth < 420 ? "h-52" : "h-56";
+  const glowColor = cardIndicatorColor(item);
   return (
     <TouchableOpacity
       onPress={handleRedirect}
-      className={`${isGrid ? `w-${width} ` : `w-${width} m-2 mt-4`}   `}
+      className={`${isGrid ? width : `${width} m-2 mt-4`}   `}
     >
       {/* 🔹 IMAGE WRAPPER */}
       <View
@@ -305,7 +299,7 @@ const ContentCard = ({
               : "https://placehold.co/600x400/1a1a1a/ffffff.png",
           }}
           resizeMode="cover"
-          className={`w-full h-${height} rounded-lg `}
+          className={`w-full ${height} rounded-lg `}
         />
 
         {/* TV watched-ratio fade: clear bottom ↔ faded top, proportional to
@@ -389,6 +383,7 @@ const ContentCard = ({
             </View>
           </>
         )}
+
         {/* 🔹 Grid görünüm alt overlay */}
         {isGrid && (
           <>
