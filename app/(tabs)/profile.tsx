@@ -1,11 +1,20 @@
+import ApiUrlEditor from "@/components/ApiUrlEditor";
+import SettingEditor from "@/components/EditableSetting";
+import { tvFadeOpacitySetting } from "@/config/settings";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 const profile = () => {
   return (
     <View className="flex-1 justify-center items-center bg-dark-200">
-      <Text className="text-3xl text-primary font-bold">Zat-ı Aliniz!</Text>
-      <Text className="text-3xl text-dark-100 font-bold">Zat-ı Aliniz!</Text>
+      <ApiUrlEditor />
+
+      <SettingEditor
+        label="Karartma oranı (0 - 1)"
+        setting={tvFadeOpacitySetting}
+        keyboardType="decimal-pad"
+        invalidMessage="0 ile 1 arasında bir sayı girin."
+      />
     </View>
   );
 };

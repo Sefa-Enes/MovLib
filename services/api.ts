@@ -14,12 +14,64 @@ import {
   DiscoverMovieFilters,
   DiscoverTvFilters,
 } from "@/utils/queryBuilder";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export const API_URL =
+const API_URL_STORAGE_KEY = "api_url_override";
+const DEFAULT_API_URL =
   process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080";
 
+// Çalışma zamanında değişebilen değer. Doğrudan okumayın, getApiUrl() kullanın.
+let currentApiUrl = DEFAULT_API_URL;
+
+export const getApiUrl = (): string => currentApiUrl;
+export const getDefaultApiUrl = (): string => DEFAULT_API_URL;
+
+// Doğrular ve normalize eder. Geçersizse null döner.
+// Kabul: http(s)://host[:port][/path]
+// Red: kullanıcı adı/şifre, query, hash, boşluk, http (release build)
+export function normalizeApiUrl(input: string): string | null {
+  const match = input
+    .trim()
+    .match(/^(https?):\/\/([^\s/?#@]+)((?:\/[^\s?#]*)?)$/i);
+  if (!match) return null;
+
+  const protocol = match[1].toLowerCase();
+  const host = match[2];
+  const path = match[3].replace(/\/+$/, "");
+
+  // Release build'de düz HTTP kabul etme
+  if (!__DEV__ && protocol !== "https") return null;
+
+  return `${protocol}://${host}${path}`;
+}
+
+// Uygulama açılışında bir kez çağırın (ilk istekten önce).
+export async function initApiUrl(): Promise<void> {
+  try {
+    const saved = await AsyncStorage.getItem(API_URL_STORAGE_KEY);
+    const normalized = saved ? normalizeApiUrl(saved) : null;
+    currentApiUrl = normalized ?? DEFAULT_API_URL;
+  } catch {
+    currentApiUrl = DEFAULT_API_URL;
+  }
+}
+
+// Başarılıysa normalize edilmiş URL'yi, geçersizse null döner.
+export async function setApiUrl(input: string): Promise<string | null> {
+  const normalized = normalizeApiUrl(input);
+  if (!normalized) return null;
+  await AsyncStorage.setItem(API_URL_STORAGE_KEY, normalized);
+  currentApiUrl = normalized;
+  return normalized;
+}
+
+export async function resetApiUrl(): Promise<void> {
+  await AsyncStorage.removeItem(API_URL_STORAGE_KEY);
+  currentApiUrl = DEFAULT_API_URL;
+}
+
 export const fetchGenres = async (): Promise<TmdbGenre[]> => {
-  const endpoint = `${API_URL}/genres`;
+  const endpoint = `${getApiUrl()}/genres`;
   const response = await fetch(endpoint, { method: "GET" });
   if (!response.ok) {
     throw new Error(`Failed to fetch genres: ${response.statusText}`);
@@ -28,10 +80,15 @@ export const fetchGenres = async (): Promise<TmdbGenre[]> => {
   return data;
 };
 
-export const TMDB_BASE_URL = `${API_URL}/tmdb`;
+// export const TMDB_BASE_URL = `${getApiUrl()}/tmdb`;
+
+export const getTmdbBaseUrl = (): string => `${getApiUrl()}/tmdb`;
 
 export const TMDB_CONFIG = {
-  BASE_URL: TMDB_BASE_URL,
+  // Getter: her erişimde güncel API URL'sini okur.
+  get BASE_URL(): string {
+    return getTmdbBaseUrl();
+  },
   API_KEY: process.env.EXPO_PUBLIC_MOVIE_API_KEY,
   headers: {
     accept: "application/json",

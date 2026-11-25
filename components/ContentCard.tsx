@@ -1,3 +1,4 @@
+import { getTvFadeOpacity } from "@/config/settings";
 import { useMediaContext } from "@/context/GlobalContext";
 import {
   deleteMovie,
@@ -40,7 +41,6 @@ type CardProps = MediaItem & {
 //   5/20  → bottom 25% clear, top 75% faded
 // No gradient library is used — the fade is a stack of thin overlay strips
 // with increasing opacity (darkest at the top, transparent at the boundary).
-const TV_FADE_OPACITY = 0.8;
 
 const renderTvProgressFade = (ratio: number) => {
   if (ratio >= 1) return null; // fully watched → no fade
@@ -53,7 +53,7 @@ const renderTvProgressFade = (ratio: number) => {
         left: 0,
         right: 0,
         height: `${fadePct}%`,
-        backgroundColor: `rgba(0,0,0,${TV_FADE_OPACITY})`,
+        backgroundColor: `rgba(0,0,0,${getTvFadeOpacity()})`,
       }}
     />
   );

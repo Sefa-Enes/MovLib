@@ -29,7 +29,7 @@ import {
   WatchedTvEpisode,
   WatchingShow,
 } from "@/interface/interfaces";
-import { API_URL } from "@/services/api";
+import { getApiUrl } from "@/services/api";
 
 export const LIBRARY_PAGE_SIZE = 20;
 
@@ -63,7 +63,7 @@ async function apiFetch(
   path: string,
   options?: RequestInit,
 ): Promise<Response> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${getApiUrl()}${path}`, {
     headers: { "Content-Type": "application/json", ...options?.headers },
     ...options,
   });
