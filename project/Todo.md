@@ -1,4 +1,5 @@
 * [X] F - Personal sekmesinde değiştirilebilir renk atamaları ve değiştirilebilir api adresi.
+* [ ] F - SideScroll kaydırma butonları.
 * [ ] F - Details sayfası detaylı bilgiler.
 * [ ] F - Bölüm için detay sayfası.
 * [ ] FB - Library Arama

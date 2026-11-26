@@ -1,4 +1,9 @@
-import { getTvFadeOpacity } from "@/config/settings";
+import {
+  colorSettings,
+  getMovieFadeOpacity,
+  getSoftFadeOpacity,
+  getTvFadeOpacity,
+} from "@/config/settings";
 import { useMediaContext } from "@/context/GlobalContext";
 import {
   deleteMovie,
@@ -20,7 +25,6 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import twColors from "tailwindcss/colors";
 
 type CardProps = MediaItem & {
   contentType?: "movie" | "tv";
@@ -86,11 +90,12 @@ const ContentCard = ({
           left: 0,
           right: 0,
           height: "100%",
-          backgroundColor: `rgba(0,0,0,${0.2})`,
+          backgroundColor: `rgba(0,0,0,${getSoftFadeOpacity()})`,
         }}
       />
     );
   };
+
   const renderMovieProgressFade = () => {
     return (
       <View
@@ -100,7 +105,7 @@ const ContentCard = ({
           left: 0,
           right: 0,
           height: "100%",
-          backgroundColor: `rgba(0,0,0,${isLibrary ? 0.5 : 0.2})`,
+          backgroundColor: `rgba(0,0,0,${isLibrary ? getMovieFadeOpacity() : getSoftFadeOpacity()})`,
         }}
       />
     );
@@ -136,46 +141,41 @@ const ContentCard = ({
     return Math.min(1, Math.max(0, (watched ?? 0) / total));
   }, [contentType, item]);
 
-  const cardImageIndicatorClass = (item: MediaItem) => {
+  const cardBorderColor = (item: MediaItem): string | null => {
     if (contentType === "tv") {
-      if (isLibrary && item.status === "Ended") {
-        return "border-2 border-purple-500 rounded-lg";
-      }
-      if (isLibrary && item.status === "Canceled") {
-        return "border-2 border-red-500 rounded-lg";
-      }
-      if (item.status === "In Production") {
-        return "border-2 border-blue-500 rounded-lg";
-      }
-      if (tvProgressRatio === 1 && item.status !== "Ended") {
-        return "border-2 border-yellow-500 rounded-lg";
-      }
-      if (inWatchlist && !isLibrary) {
-        return "border-2 border-yellow-500 rounded-lg";
-      }
+      if (isLibrary && item.status === "Ended")
+        return colorSettings.endedTv.get();
+      if (isLibrary && item.status === "Canceled")
+        return colorSettings.canceledTv.get();
+      if (item.status === "In Production")
+        return colorSettings.inProductionTv.get();
+      if (tvProgressRatio === 1 && item.status !== "Ended")
+        return colorSettings.returningTv.get();
+      if (inWatchlist && !isLibrary) return colorSettings.inWatchlistTv.get();
     }
-
-    if (contentType === "movie" && isWatched) {
-      return "border-2 border-purple-500 rounded-lg";
-    }
-    if (contentType === "movie" && inWatchlist && !isLibrary) {
-      return "border-2 border-yellow-500 rounded-lg";
-    }
-
-    return ""; // Varsayılan durum (border yok)
+    if (contentType === "movie" && isWatched)
+      return colorSettings.watchedMovie.get();
+    if (contentType === "movie" && inWatchlist && !isLibrary)
+      return colorSettings.inWatchlistMovie.get();
+    return null; // Varsayılan durum (border yok)
   };
+
   const cardIndicatorColor = (item: MediaItem): string | null => {
     if (contentType === "tv") {
-      if (item.status === "In Production") return twColors.blue[500];
-      if (inWatchlist && !isLibrary) return twColors.yellow[500];
-      if (isLibrary && item.status === "Ended") return twColors.purple[400];
-      if (isLibrary && item.status === "Canceled") return twColors.red[400];
+      if (item.status === "In Production")
+        return colorSettings.inProductionTv.get();
+      if (inWatchlist && !isLibrary) return colorSettings.inWatchlistTv.get();
+      if (isLibrary && item.status === "Ended")
+        return colorSettings.endedTv.get();
+      if (isLibrary && item.status === "Canceled")
+        return colorSettings.canceledTv.get();
       if (isLibrary && tvProgressRatio === 1 && item.status !== "Ended")
-        return twColors.yellow[500];
+        return colorSettings.returningTv.get();
     }
-    if (contentType === "movie" && isWatched) return twColors.purple[400];
+    if (contentType === "movie" && isWatched)
+      return colorSettings.watchedMovie.get();
     if (contentType === "movie" && inWatchlist && !isLibrary)
-      return twColors.yellow[500];
+      return colorSettings.inWatchlistMovie.get();
     return null;
   };
   const dbFns = useMemo(() => {
@@ -274,6 +274,7 @@ const ContentCard = ({
   const width = screenWidth < 420 ? "w-32" : "w-36";
   const height = screenWidth < 420 ? "h-52" : "h-56";
   const glowColor = cardIndicatorColor(item);
+  const borderColor = cardBorderColor(item);
   return (
     <TouchableOpacity
       onPress={handleRedirect}
@@ -349,10 +350,11 @@ const ContentCard = ({
             </View>
           )} */}
 
-        {cardImageIndicatorClass(item) !== "" && (
+        {borderColor && (
           <View
             pointerEvents="none"
-            className={`absolute inset-0 ${cardImageIndicatorClass(item)}`}
+            className="absolute inset-0 rounded-lg"
+            style={{ borderWidth: 2, borderColor }}
           />
         )}
         {contentType === "movie" && (

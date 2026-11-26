@@ -1,4 +1,5 @@
 // components/SettingEditor.tsx
+import { RotateCcw, Save } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, Text, TextInput, TextInputProps, View } from "react-native";
 
@@ -29,9 +30,9 @@ type Feedback = { type: "ok" | "error"; text: string } | null;
 export default function SettingEditor({
   label,
   setting,
-  invalidMessage = "Geçersiz değer.",
-  savedMessage = "Kaydedildi.",
-  resetMessage = "Varsayılan değer geri yüklendi.",
+  invalidMessage = "Invalid Value.",
+  savedMessage = "Saved.",
+  resetMessage = "Resetted to default.",
   placeholder,
   keyboardType = "default",
   secureTextEntry = false,
@@ -54,7 +55,7 @@ export default function SettingEditor({
       setFeedback({ type: "ok", text: savedMessage });
       onChanged?.(saved);
     } catch {
-      setFeedback({ type: "error", text: "Kaydedilemedi." });
+      setFeedback({ type: "error", text: "Couldn't Save." });
     } finally {
       setBusy(false);
     }
@@ -70,34 +71,60 @@ export default function SettingEditor({
       setFeedback({ type: "ok", text: resetMessage });
       onChanged?.(def);
     } catch {
-      setFeedback({ type: "error", text: "Sıfırlanamadı." });
+      setFeedback({ type: "error", text: "Couldn't  Reset." });
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <View className="gap-3 p-4">
+    <View className="gap-2 p-4">
       <Text className="text-base font-semibold text-white">{label}</Text>
 
-      <TextInput
-        className="rounded-lg border border-gray-600 px-3 py-2.5 text-white"
-        value={value}
-        onChangeText={(text) => {
-          setValue(text);
-          setFeedback(null);
-        }}
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType={keyboardType}
-        secureTextEntry={secureTextEntry}
-        placeholder={placeholder ?? setting.getDefault()}
-        placeholderTextColor="#888"
-        editable={!busy}
-        returnKeyType="done"
-        onSubmitEditing={onSave}
-      />
+      <View className="flex-row items-center gap-2">
+        {/* Input: kalan alanın tamamını alır */}
+        <TextInput
+          className="flex-1 rounded-lg border border-gray-600 px-3 py-2.5 text-white"
+          value={value}
+          onChangeText={(text) => {
+            setValue(text);
+            setFeedback(null);
+          }}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType={keyboardType}
+          secureTextEntry={secureTextEntry}
+          placeholder={placeholder ?? setting.getDefault()}
+          placeholderTextColor="#888"
+          editable={!busy}
+          returnKeyType="done"
+          onSubmitEditing={onSave}
+        />
 
+        {/* Butonlar: sabit boyut, flex-1 yok */}
+        <Pressable
+          className={`h-11 w-11 items-center justify-center rounded-lg bg-blue-600 ${
+            busy ? "opacity-50" : ""
+          }`}
+          onPress={onSave}
+          disabled={busy}
+          accessibilityLabel="Save"
+        >
+          <Save size={20} color="white" />
+        </Pressable>
+        <Pressable
+          className={`h-11 w-11 items-center justify-center rounded-lg bg-gray-700 ${
+            busy ? "opacity-50" : ""
+          }`}
+          onPress={onReset}
+          disabled={busy}
+          accessibilityLabel="Reset to default"
+        >
+          <RotateCcw size={20} color="white" />
+        </Pressable>
+      </View>
+
+      {/* Feedback satırın dışında. Satır içinde olursa input'u sıkıştırır. */}
       {feedback && (
         <Text
           className={
@@ -108,29 +135,8 @@ export default function SettingEditor({
         </Text>
       )}
 
-      <View className="flex-row gap-3">
-        <Pressable
-          className={`flex-1 items-center rounded-lg bg-blue-600 py-3 ${
-            busy ? "opacity-50" : ""
-          }`}
-          onPress={onSave}
-          disabled={busy}
-        >
-          <Text className="font-semibold text-white">Kaydet</Text>
-        </Pressable>
-        <Pressable
-          className={`flex-1 items-center rounded-lg bg-gray-700 py-3 ${
-            busy ? "opacity-50" : ""
-          }`}
-          onPress={onReset}
-          disabled={busy}
-        >
-          <Text className="font-semibold text-white">Varsayılana dön</Text>
-        </Pressable>
-      </View>
-
       <Text className="text-xs text-gray-500">
-        Varsayılan: {setting.getDefault()}
+        Default: {setting.getDefault()}
       </Text>
     </View>
   );
