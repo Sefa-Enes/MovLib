@@ -7,8 +7,9 @@ import { useChoseFetch } from "@/hooks/useChoseFetch";
 import useFetch from "@/hooks/useFetch";
 import { DiscoverMovieFilters } from "@/utils/queryBuilder";
 import { useRouter } from "expo-router";
+import { RotateCcw } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
-import { RefreshControl, Text } from "react-native";
+import { Pressable, RefreshControl, Text } from "react-native";
 
 import { Image, ScrollView, View } from "react-native";
 export default function Index() {
@@ -256,6 +257,9 @@ export default function Index() {
           placeholder="Search a movie or series"
           onChangeText={function (text: string): void {}}
         /> */}
+        <Pressable onPress={onRefresh}>
+          <RotateCcw size={24} color="white" />
+        </Pressable>
         <View className="mb-20">
           <View className=" mt-20">
             <>
