@@ -15,15 +15,14 @@ const MovieDetails = () => {
   // autoFetch'i kapattık, kontrol bizde
   const { data, loading, error, refetch } = useFetch(
     () => fetchMovieDetails({ id: Number(id) }),
-    false
+    false,
   );
 
-  // Sadece veri yoksa fetch et
   useEffect(() => {
-    if (!mediaObject) {
+    if (id) {
       refetch();
     }
-  }, [mediaObject, id]);
+  }, [id]);
 
   useEffect(() => {
     if (data && !mediaObject) {
@@ -31,10 +30,19 @@ const MovieDetails = () => {
     }
   }, [data]);
 
-  if (loading && !mediaObject) {
+  const routeId = Number(id);
+  // Context içinde önceki filmden kalan veri olabilir. Sadece id eşleşirse kullan.
+  const current =
+    mediaObject && mediaObject.id === routeId ? mediaObject : data;
+
+  if (!current) {
     return (
       <View className="flex-1 justify-center items-center bg-accent">
-        <ActivityIndicator size="large" color="#fff" />
+        {error ? (
+          <Text>Error: {error.message}</Text>
+        ) : (
+          <ActivityIndicator size="large" color="#fff" />
+        )}
       </View>
     );
   }
@@ -53,7 +61,7 @@ const MovieDetails = () => {
         detailData={data}
         setMediaObject={setMediaObject}
         contentType={contentType}
-        mediaObject={mediaObject || data}
+        mediaObject={current}
         setFilters={setFilters}
         refetchDetails={refetch}
       />

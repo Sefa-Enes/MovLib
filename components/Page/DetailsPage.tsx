@@ -12,6 +12,7 @@ import {
 import useFetch from "@/hooks/useFetch";
 import { MediaItem, Movie, Tv, WatchedTvEpisode } from "@/interface/interfaces";
 import {
+  fetchCollection,
   fetchRecommendations,
   fetchSimilar,
   fetchTvSeasonEpisodes,
@@ -19,14 +20,7 @@ import {
 import { isEpisodeAired } from "@/utils/episodeHelpers";
 import { DiscoverMovieFilters } from "@/utils/queryBuilder";
 import { router } from "expo-router";
-import {
-  Check,
-  ChevronDown,
-  ChevronUp,
-  Eye,
-  Plus,
-  X,
-} from "lucide-react-native";
+import { X } from "lucide-react-native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Image,
@@ -37,11 +31,17 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { RenderListItems } from "../CategoryClickable";
+import CreatorRow from "../DetailsPage/CreatorRow";
+import DetailsActions from "../DetailsPage/DetailsActions";
+import DetailsHero from "../DetailsPage/DetailsHero";
+import DetailsInfoGrid from "../DetailsPage/DetailsInfoGrid";
+import EpisodeHighlightCard from "../DetailsPage/EpisodeHighlightCard";
+import GenreChips from "../DetailsPage/GenreChips";
+import LogoRow from "../DetailsPage/LogoRow";
+import OverviewText from "../DetailsPage/OverviewText";
 import SeasonEpisodeList from "../Episodes/SeasonEpisodeList";
 import SideScrollList from "../SideScrollList";
 import Divider from "../ui/Divider";
-import ExpandableView from "../ui/ExpandableView";
 
 const DetailsPage = ({
   detailData,
@@ -83,7 +83,6 @@ const DetailsPage = ({
       }),
     false,
   );
-  const [detailDrawer, setDetailDrawer] = useState<boolean>(false);
   const [posterModalOpen, setPosterModalOpen] = useState(false);
 
   const [inWatchlist, setInWatchlist] = useState(false);
@@ -101,6 +100,8 @@ const DetailsPage = ({
   // Current show id. Async results for a previous show (user navigated via
   // Similar) are ignored when this no longer matches.
   const tvIdRef = useRef<number | undefined>(mediaObject?.id);
+  // DetailsPage.tsx
+  // Latest episode stays hidden until the user taps the spoiler button.
 
   useEffect(() => {
     tvIdRef.current = mediaObject?.id;
@@ -114,6 +115,42 @@ const DetailsPage = ({
     () => (detailData?.seasons ?? []).filter((s) => s.season_number > 0),
     [detailData?.seasons],
   );
+  // Fresh detail response when it matches the shown item; list item otherwise.
+  const item = useMemo(
+    () =>
+      detailData && detailData.id === mediaObject?.id
+        ? detailData
+        : mediaObject,
+    [detailData, mediaObject],
+  );
+  // Movies use release_date, TV uses first_air_date.
+  const displayDate = item?.release_date || item?.first_air_date;
+
+  const collectionId =
+    contentType === "movie" ? item?.belongs_to_collection?.id : undefined;
+  const [showLatestEpisode, setShowLatestEpisode] = useState(false);
+
+  // Hide it again when another title opens.
+  useEffect(() => {
+    setShowLatestEpisode(false);
+  }, [item?.id]);
+  const {
+    data: collectionData,
+    loading: collectionLoading,
+    error: collectionError,
+    refetch: refetchCollection,
+    reset: resetCollection,
+  } = useFetch(() => fetchCollection({ id: Number(collectionId) }), false);
+
+  // The list item has no belongs_to_collection. The id appears when the detail
+  // response arrives, so this effect runs again at that time.
+  useEffect(() => {
+    if (collectionId) {
+      refetchCollection();
+    } else {
+      resetCollection();
+    }
+  }, [collectionId]);
   // components/DetailsPage/DetailsPage.tsx
   // 🔹 Library durumu: proxy annotation'dan (in_library / is_watched).
   // detailData is the fresh tv/{id} or movie/{id} response; mediaObject may be
@@ -425,18 +462,18 @@ const DetailsPage = ({
   return (
     <View
       className="flex-1 bg-dark-200"
-      style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
+      style={{ paddingBottom: insets.bottom }}
     >
-      <View className="flex-row items-center w-[95%] h-20 gap-x-1 justify-end">
-        <TouchableOpacity
-          onPress={() =>
-            router.canGoBack() ? router.back() : router.push("/(tabs)")
-          }
-          className="flex-row items-center justify-center gap-x-2 h-10 w-10 rounded-full"
-        >
-          <X className="text-accent font-bold" size={36} />
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        onPress={() =>
+          router.canGoBack() ? router.back() : router.push("/(tabs)")
+        }
+        accessibilityLabel="Close"
+        className="absolute right-4 h-10 w-10 items-center justify-center rounded-full bg-black/50"
+        style={{ top: insets.top + 8, zIndex: 10 }}
+      >
+        <X size={24} color="white" />
+      </TouchableOpacity>
 
       <ScrollView
         className="flex-1 w-full"
@@ -446,236 +483,62 @@ const DetailsPage = ({
           paddingHorizontal: 20,
         }}
       >
-        <View className="flex-row items-center justify-center w-full mb-4">
-          <Text className="text-center font-bold text-3xl text-white flex-wrap">
-            {mediaObject?.title || mediaObject?.name}
-          </Text>
-        </View>
-
-        <View id="upperSection" className="flex-row mt-6 gap-3">
-          <TouchableOpacity
-            className="shrink-0"
-            onPress={() => setPosterModalOpen(true)}
-          >
-            <Image
-              source={{
-                uri: mediaObject?.poster_path
-                  ? `https://image.tmdb.org/t/p/w500${mediaObject.poster_path}`
-                  : "https://placehold.co/400x600/1a1a1a/ffffff.png",
-              }}
-              resizeMode="contain"
-              className="rounded-lg w-44 h-60"
-            />
-          </TouchableOpacity>
-          <Modal
-            visible={posterModalOpen}
-            transparent={false}
-            onRequestClose={() => setPosterModalOpen(false)}
-          >
-            <View className="flex-1 bg-black justify-center items-center ">
-              <TouchableOpacity
-                onPress={() => setPosterModalOpen(false)}
-                className="flex-1 w-full"
-              >
-                <Image
-                  source={{
-                    uri: mediaObject?.poster_path
-                      ? `https://image.tmdb.org/t/p/w500${mediaObject.poster_path}`
-                      : "https://placehold.co/400x600/1a1a1a/ffffff.png",
-                  }}
-                  className="w-full h-full"
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
-            </View>
-          </Modal>
-          <View className="flex-1 flex-col gap-2">
-            {/* Yayın Tarihi */}
-            {mediaObject?.release_date && (
-              <Text className="text-gray-300" numberOfLines={2}>
-                Release Date:{" "}
-                <Text className="text-white font-medium">
-                  {new Date(mediaObject.release_date).toLocaleDateString()}
-                </Text>
-              </Text>
-            )}
-
-            {/* Kullanıcı Oylaması */}
-            <View className="flex-row items-center flex-wrap">
-              <Text className="text-yellow-400 font-bold">
-                ⭐ {mediaObject?.vote_average?.toFixed(1)}
-              </Text>
-              <Text className="text-gray-400 ml-2">
-                ({mediaObject?.vote_count} votes)
-              </Text>
-            </View>
-
-            {/* Kategori */}
-            <View className="flex flex-wrap flex-row">
-              {/* <Text className="text-gray-300 mb-1">Category: </Text> */}
-              <RenderListItems
-                header="Category: "
-                ids={
-                  mediaObject?.genre_ids ||
-                  mediaObject?.genres?.map((g) => ("id" in g ? g.id : g))
-                }
-                onGenrePress={(genreId) => {
-                  setFilters({
-                    with_genres: [Number(genreId)],
-                    sort_by: "popularity.desc",
-                  });
-                  router.push("/(tabs)/search");
+        <DetailsHero
+          item={item}
+          contentType={contentType}
+          onPosterPress={() => setPosterModalOpen(true)}
+        />
+        <Modal
+          visible={posterModalOpen}
+          transparent={false}
+          onRequestClose={() => setPosterModalOpen(false)}
+        >
+          <View className="flex-1 bg-black justify-center items-center ">
+            <TouchableOpacity
+              onPress={() => setPosterModalOpen(false)}
+              className="flex-1 w-full"
+            >
+              <Image
+                source={{
+                  uri: item?.poster_path
+                    ? `https://image.tmdb.org/t/p/w780${item.poster_path}`
+                    : "https://placehold.co/400x600/1a1a1a/ffff.png",
                 }}
+                className="w-full h-full"
+                resizeMode="contain"
               />
-            </View>
-
-            {/* Popülerlik */}
-            {mediaObject?.popularity && (
-              <Text className="text-gray-300" numberOfLines={1}>
-                Popularity:{" "}
-                <Text className="text-white font-medium">
-                  {Math.round(mediaObject.popularity)}
-                </Text>
-              </Text>
-            )}
-
-            {mediaObject?.original_language && (
-              <Text className="text-gray-300  " numberOfLines={1}>
-                Language:{" "}
-                <Text className="text-white  uppercase font-medium">
-                  {mediaObject.original_language}
-                </Text>
-              </Text>
-            )}
-
-            {mediaObject?.adult && (
-              <Text className="text-gray-300  " numberOfLines={1}>
-                🔞 Adult Content
-              </Text>
-            )}
-
-            {mediaObject && (
-              <>
-                {contentType === "movie" && (
-                  <View className="w-full">
-                    <TouchableOpacity
-                      onPress={handleWatchedPress}
-                      className={`flex-row gap-2 justify-center rounded-lg p-1 ${
-                        !isWatched ? "bg-secondary" : "bg-primary"
-                      }`}
-                    >
-                      <Eye size={18} color={isWatched ? "white" : "darkgray"} />
-
-                      <Text>{isWatched ? "Watched" : "Not Watched"}</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-                <View className="w-full ">
-                  <TouchableOpacity
-                    onPress={handleWatchlistPress}
-                    className={`flex flex-row gap-2 justify-center rounded-lg p-1 ${
-                      !inWatchlist ? "bg-secondary" : "bg-primary"
-                    }`}
-                  >
-                    {inWatchlist ? (
-                      <Check size={18} color="white" />
-                    ) : (
-                      <Plus size={18} className="text-accent" />
-                    )}
-                    <Text>{inWatchlist ? "Added To List" : "Not Added"}</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
+            </TouchableOpacity>
           </View>
-        </View>
-        <Divider dividerStyle={{ marginTop: 20, marginBottom: 10 }}></Divider>
-        <View>
-          <ExpandableView expanded={detailDrawer} expheight={200}>
-            {/* Production Companies */}
-            {detailData?.production_companies && (
-              <View className="flex flex-wrap flex-row">
-                <RenderListItems
-                  header="Production: "
-                  ids={detailData?.production_companies?.map((g) =>
-                    "id" in g ? g.id : g,
-                  )}
-                  onGenrePress={(companyName) => {
-                    setFilters({
-                      with_companies: [String(companyName)],
-                      sort_by: "popularity.desc",
-                    });
-                    router.push("/(tabs)/search");
-                  }}
-                  idList={detailData?.production_companies?.reduce(
-                    (acc, item) => {
-                      acc[item.id] = item.name; // id → name eşle
-                      return acc;
-                    },
-                    {} as Record<number, string>,
-                  )}
-                />
-              </View>
-            )}
-
-            {/* Budget */}
-            {detailData?.budget ? (
-              <View className="flex flex-wrap flex-row">
-                <Text className="text-gray-300">
-                  Budget:{" "}
-                  <Text className="text-white">
-                    ${detailData.budget / 1000000}M
-                  </Text>
-                </Text>
-              </View>
-            ) : null}
-            {/* Revenue */}
-            {detailData?.revenue ? (
-              <View className="flex flex-wrap flex-row">
-                <Text className="text-gray-300">
-                  Revenue:{" "}
-                  <Text className="text-white">
-                    ${(detailData.revenue / 1000000).toFixed(2)}M
-                  </Text>
-                </Text>
-              </View>
-            ) : null}
-          </ExpandableView>
-
-          <TouchableOpacity
-            onPress={() => {
-              setDetailDrawer(!detailDrawer);
-              !detailData && refetchDetails();
+        </Modal>
+        {mediaObject && (
+          <DetailsActions
+            contentType={contentType}
+            isWatched={isWatched}
+            inWatchlist={inWatchlist}
+            onWatchedPress={handleWatchedPress}
+            onWatchlistPress={handleWatchlistPress}
+            homepage={item?.homepage}
+            imdbId={item?.imdb_id}
+          />
+        )}
+        <View className="mt-4">
+          <GenreChips
+            item={item}
+            onGenrePress={(genreId) => {
+              setFilters({
+                with_genres: [Number(genreId)],
+                sort_by: "popularity.desc",
+              });
+              router.push("/(tabs)/search");
             }}
-            className="flex-row items-top justify-center mt-2"
-          >
-            {!detailDrawer ? (
-              <>
-                <ChevronDown className="text-white" />
-                <Text className="ml-3 text-gray-300 font-medium">
-                  More Details
-                </Text>
-              </>
-            ) : (
-              <>
-                <ChevronUp className="text-white" />
-                <Text className="ml-3 text-gray-300 font-medium">
-                  Less Details
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
+          />
         </View>
-        <Divider dividerStyle={{ marginTop: 10, marginBottom: 10 }}></Divider>
+        <Divider dividerStyle={{ marginTop: 20, marginBottom: 10 }} />
+        <OverviewText overview={item?.overview} />
+        <Divider dividerStyle={{ marginTop: 10, marginBottom: 10 }} />
+
         {contentType === "tv" && (
           <>
-            <Divider
-              dividerStyle={{
-                marginTop: 10,
-                marginBottom: 10,
-              }}
-            />
-
             <SeasonEpisodeList
               seasons={visibleSeasons}
               episodesBySeason={seasonEpisodes}
@@ -688,19 +551,56 @@ const DetailsPage = ({
             />
           </>
         )}
-        <View className="flex-row">
-          {mediaObject?.overview && (
-            <Text className="text-gray-300">
-              {" "}
-              <Text className="text-gray font-medium">
-                {mediaObject.overview}
-              </Text>
-            </Text>
-          )}
-        </View>
+        {contentType === "tv" && (
+          // Parent screen — replaces the old conditional block
+          <View className="mt-5">
+            {item?.last_episode_to_air && (
+              <EpisodeHighlightCard
+                label="Latest episode"
+                episode={item.last_episode_to_air}
+                spoiler
+              />
+            )}
+            <EpisodeHighlightCard
+              label="Next episode"
+              episode={item?.next_episode_to_air}
+              showCountdown
+            />
+          </View>
+        )}
+
+        <DetailsInfoGrid item={item} contentType={contentType} />
+        <LogoRow
+          title="Production"
+          items={item?.production_companies}
+          onItemPress={(companyId) => {
+            setFilters({
+              with_companies: [String(companyId)],
+              sort_by: "popularity.desc",
+            });
+            router.push("/(tabs)/search");
+          }}
+        />
+        {contentType === "tv" && (
+          <LogoRow title="Networks" items={item?.networks} />
+        )}
+        {contentType === "tv" && <CreatorRow creators={item?.created_by} />}
         <Divider dividerStyle={{ marginTop: 10, marginBottom: 10 }} />
         <View className="flex-1 mt-5">
           <>
+            {contentType === "movie" && !!collectionId && (
+              <View>
+                <Text className="text-lg text-accent font-bold mt-5 ">
+                  {item?.belongs_to_collection?.name}
+                </Text>
+                <SideScrollList
+                  contentType={contentType}
+                  data={collectionData}
+                  loading={collectionLoading}
+                  error={collectionError}
+                />
+              </View>
+            )}
             <View>
               <Text className="text-lg text-accent font-bold mt-5 ">
                 Recommended Content

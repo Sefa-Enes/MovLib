@@ -251,6 +251,28 @@ export const fetchTvDetails = async ({
   return data;
 };
 
+export const fetchCollection = async ({
+  contentType = "movie",
+
+  id,
+}: {
+  contentType?: "movie";
+  id: number;
+}): Promise<MediaItem[]> => {
+  const endpoint = `${TMDB_CONFIG.BASE_URL}/collection/${id}?language=en-US`;
+
+  const response = await fetch(endpoint, {
+    method: "GET",
+    headers: TMDB_CONFIG.headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch series: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.parts; //, Okunması istenilen json objesi buraya.
+};
 export const fetchSimilar = async ({
   contentType = "movie",
 

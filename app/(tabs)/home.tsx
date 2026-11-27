@@ -1,5 +1,6 @@
+// app/(tabs)/index.tsx
 import { colors } from "@/components/colors";
-import NextEpisodeCard from "@/components/NextEpisodeCard";
+import NextEpisodeCard, { COLUMN_GAP } from "@/components/NextEpisodeCard";
 import {
   getWatchingAwhileShows,
   getWatchingShows,
@@ -8,6 +9,7 @@ import {
 import useFetch from "@/hooks/useFetch";
 import { WatchingShow } from "@/interface/interfaces";
 import { useRouter } from "expo-router";
+import { Tv } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -15,12 +17,38 @@ import {
   Text,
   useWindowDimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 // app/(tabs)/index.tsx  — imports
+import SectionHeader from "@/components/Home/SectionHeader";
 import { Image, ScrollView, View } from "react-native";
+
+const ROW_GAP = COLUMN_GAP; // vertical space between rows
+
+// Same grid for both lists. Gap comes from NextEpisodeCard.
+const gridStyle = {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "center",
+  columnGap: COLUMN_GAP,
+  rowGap: ROW_GAP,
+} as const;
+
+const ErrorBox = ({ message }: { message: string }) => (
+  <View className="mt-3 rounded-xl border border-red-500/40 bg-red-500/10 p-4">
+    <Text className="text-red-300">{`Error: ${message}`}</Text>
+  </View>
+);
+
+const EmptyBox = ({ text }: { text: string }) => (
+  <View className="mt-3 items-center rounded-xl border border-white/10 bg-dark-100/60 py-6">
+    <Tv size={28} color="#6b7280" />
+    <Text className="text-gray-300 mt-2">{text}</Text>
+  </View>
+);
+
 export default function Home() {
-  const COLUMN_GAP = 12; // horizontal space between cards
-  const ROW_GAP = 12; // vertical space between rows
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const width = useWindowDimensions().width;
   // n * CARD_WIDTH + (n - 1) * COLUMN_GAP <= availableWidth
 
@@ -100,7 +128,11 @@ export default function Home() {
         className="flex-1 px-5 w-full"
         key={refreshKey}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ minHeight: "100%", paddingBottom: 10 }}
+        contentContainerStyle={{
+          minHeight: "100%",
+          paddingTop: insets.top + 16,
+          paddingBottom: 120, // space for the tab bar
+        }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -110,32 +142,20 @@ export default function Home() {
           />
         }
       >
-        <View id="watching" className="mt-20">
-          <Text className="text-lg text-accent font-bold mt-5">Watching</Text>
+        <View id="watching">
+          <SectionHeader title="Watching" />
           {loading && !watching ? (
             <ActivityIndicator
               size="large"
-              color="white"
+              color={colors.accent}
               className="mt-10 self-center"
             />
           ) : error ? (
-            <Text className="text-white mt-5">Error: {error.message}</Text>
+            <ErrorBox message={error.message} />
           ) : !watching?.length ? (
-            <Text className="text-gray-50 mt-5">
-              Nothing to watch right now.
-            </Text>
+            <EmptyBox text="Nothing to watch right now." />
           ) : (
-            <View
-              className="mt-20"
-              style={{
-                flexDirection: "row",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                columnGap: COLUMN_GAP,
-                rowGap: ROW_GAP,
-                paddingBottom: 120,
-              }}
-            >
+            <View className="mt-3" style={gridStyle}>
               {watching.map((item) => (
                 <NextEpisodeCard
                   key={item.id}
@@ -146,49 +166,32 @@ export default function Home() {
               ))}
             </View>
           )}
-          {<Text> </Text>}
         </View>
-        <View id="watchedAwhile">
-          <Text className="text-lg text-accent font-bold">
-            Not Watched For Awhile
-          </Text>
+        <View id="watchedAwhile" className="mt-8">
+          <SectionHeader title="Not Watched For Awhile" />
           {loadingAwhile && !watchingAwhile ? (
             <ActivityIndicator
               size="large"
-              color="white"
+              color={colors.accent}
               className="mt-10 self-center"
             />
           ) : errorAwhile ? (
-            <Text className="text-white mt-5">
-              Error: {errorAwhile.message}
-            </Text>
+            <ErrorBox message={errorAwhile.message} />
           ) : !watchingAwhile?.length ? (
-            <Text className="text-gray-50 mt-5">
-              You really never leave anything behind!
-            </Text>
+            <EmptyBox text="You really never leave anything behind!" />
           ) : (
-            <View
-              className="mt-5"
-              style={{
-                flexDirection: "row",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                columnGap: COLUMN_GAP,
-                rowGap: ROW_GAP,
-                paddingBottom: 120,
-              }}
-            >
+            <View className="mt-3" style={gridStyle}>
               {watchingAwhile.map((item) => (
                 <NextEpisodeCard
                   key={item.id}
                   item={item}
+                  muted
                   busy={busyId === item.id}
                   onMarkWatched={onMarkWatched}
                 />
               ))}
             </View>
           )}
-          {<Text> </Text>}
         </View>
       </ScrollView>
     </View>

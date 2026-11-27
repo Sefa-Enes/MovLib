@@ -1,8 +1,9 @@
 * [X] F - Personal sekmesinde değiştirilebilir renk atamaları ve değiştirilebilir api adresi.
-* [ ] F - SideScroll kaydırma butonları.
-* [ ] F - Details sayfası detaylı bilgiler.
-* [ ] F - Bölüm için detay sayfası.
-* [ ] FB - Library Arama
+* [X] F - SideScroll kaydırma butonları.
+* [X] F - Details sayfası detaylı bilgiler.
+* [ ] Fix - Profile page Text hatası, ve ayarların kalıcılığı
+* [ ] ~~F - Bölüm için detay sayfası.~~
+* [ ] ~~FB - Library Arama~~ 
 * [ ] FB - Sonuna kadar izlenmiş devam edenler için güncelleme. Belki bitti olanlar ve cancelled olanlar için de arada güncelleme.
 * [ ] FB - Yeni bölümü yayınlanmamış ama tarihi belli olanlar için sayaç.
 * [ ] FB - Kişisel Puanlama sistemi

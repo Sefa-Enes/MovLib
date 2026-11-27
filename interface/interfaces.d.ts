@@ -115,6 +115,8 @@ export interface Tv extends BaseContent {
     show_id: number;
     still_path: string | null;
   };
+  episode_run_time?: number[];
+  next_episode_to_air?: TvEpisode | null;
 }
 
 // Movie ve Tv tiplerini birleştiren MediaItem
@@ -177,6 +179,8 @@ export interface MediaItem extends BaseContent {
   seasons?: TvSeason[];
 
   last_episode_to_air?: TvEpisode | null;
+  episode_run_time?: number[];
+  next_episode_to_air?: TvEpisode | null;
 }
 export interface SeasonProgress {
   seasonNumber: number;
